@@ -1,0 +1,19 @@
+package org.unihubworkshop.workshopservice.repositories;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+import org.unihubworkshop.workshopservice.models.Workshop;
+
+import java.util.List;
+import java.util.UUID;
+
+@Repository
+public interface WorkshopRepository extends JpaRepository<Workshop, UUID> {
+
+    List<Workshop> findByHostId(UUID hostId);
+
+    List<Workshop> findByRoom(String room);
+
+    List<Workshop> findByNameContainingIgnoreCase(String name);
+}
+

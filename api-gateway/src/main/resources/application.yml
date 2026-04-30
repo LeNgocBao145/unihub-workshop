@@ -1,0 +1,45 @@
+server:
+  port: 4000
+
+spring:
+  cloud:
+    gateway:
+      server:
+        webflux:
+          routes:
+            ## REST CLIENT -> http://localhost:4000/api/workshops
+            ## API GATEWAY -> http://workshop-service:4002/workshops
+            - id: workshop-service-route
+              uri: http://localhost:4002
+              predicates:
+                - Path=/api/workshops/**
+              filters:
+                - StripPrefix=1
+#                - JwtValidation
+
+              ## REST-CLIENT -> http://localhost:4000/api-docs/workshops
+              ## API-GATEWAY -> http://workshop-service:4002/v3/api-docs
+            - id: api-docs-workshop-route
+              uri: http://workshop-service:4002
+              predicates:
+                - Path=/api-docs/workshops
+              filters:
+                - RewritePath=/api-docs/workshops,/v3/api-docs
+
+            - id: auth-service-route
+              uri: http://auth-service:4001
+              predicates:
+                - Path=/auth/**
+              filters:
+                - StripPrefix=1
+
+            - id: api-docs-auth-route
+              uri: http://auth-service:4001
+              predicates:
+                - Path=/api-docs/auth
+              filters:
+                - RewritePath=/api-docs/auth,/v3/api-docs
+
+logging:
+  level:
+    org.springframework.cloud.gateway: TRACE
