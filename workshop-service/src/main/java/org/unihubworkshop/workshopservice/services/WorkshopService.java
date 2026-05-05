@@ -2,6 +2,9 @@ package org.unihubworkshop.workshopservice.services;
 
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.unihubworkshop.workshopservice.dto.CreateWorkshopRequest;
@@ -18,6 +21,8 @@ import org.unihubworkshop.workshopservice.repositories.WorkshopRepository;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Page;
 import org.unihubworkshop.workshopservice.exceptions.NotFoundException;
+
+import java.time.LocalDateTime;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -111,20 +116,20 @@ public class WorkshopService {
         findWorkshopById(id);
         workshopRepository.deleteById(id);
     }
-    
+
     @Transactional(readOnly = true)
     public StatisticsResponse getStatistics() {
         List<Workshop> allWorkshops = workshopRepository.findAll();
-        
+
         long totalWorkshops = allWorkshops.size();
         long totalRegistrations = allWorkshops.stream()
                 .mapToLong(w -> (long) w.getTotalSlots() - w.getAvailableSlots())
                 .sum();
-                
+
         List<WorkshopSimpleResponse> simpleWorkshops = allWorkshops.stream()
                 .map(workshopMapper::toSimpleResponse)
                 .toList();
-                
+
         return new StatisticsResponse(totalWorkshops, totalRegistrations, simpleWorkshops);
     }
 

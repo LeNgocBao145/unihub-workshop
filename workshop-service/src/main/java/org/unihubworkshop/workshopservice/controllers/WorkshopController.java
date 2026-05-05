@@ -27,7 +27,7 @@ public class WorkshopController {
         this.workshopService = workshopService;
     }
 
-    @PostMapping 
+    @PostMapping
     public ResponseEntity<WorkshopResponse> createWorkshop(
             @Valid @RequestBody CreateWorkshopRequest request) {
         WorkshopResponse response = workshopService.createWorkshop(request);
@@ -40,11 +40,11 @@ public class WorkshopController {
         ApiResponse<WorkshopResponse> response =
                 new ApiResponse<>(true, "Get workshop successfully", data);
         /*
-        ResponseEntity.ok(data): Trả về status 200 + body 
+        ResponseEntity.ok(data): Trả về status 200 + body
          */
         return ResponseEntity.ok(response);
     }
-    
+
     @GetMapping("/{id}/payment")
     public ResponseEntity<ApiResponse<WorkshopPaymentResponse>> getWorkshopPaymentInfo(@PathVariable UUID id) {
         WorkshopPaymentResponse data = workshopService.getWorkshopPaymentInfo(id);
@@ -95,7 +95,7 @@ public class WorkshopController {
         List<WorkshopResponse> responses = workshopService.getWorkshopsByRoom(room);
         return ResponseEntity.ok(responses);
     }
-    
+
 
 
     @PutMapping("/{id}")

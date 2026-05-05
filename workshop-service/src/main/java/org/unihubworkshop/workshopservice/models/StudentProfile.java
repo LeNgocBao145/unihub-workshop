@@ -13,9 +13,10 @@ import java.util.UUID;
 @AllArgsConstructor
 public class StudentProfile {
 
+
     @Id
     @Column(name = "user_id", updatable = false, nullable = false)
-    private UUID userId; 
+    private UUID userId;
 
     @Column(name = "student_code", nullable = false, unique = true)
     private String studentCode;

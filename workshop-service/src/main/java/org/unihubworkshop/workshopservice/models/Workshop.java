@@ -17,7 +17,6 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 public class Workshop {
-
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
