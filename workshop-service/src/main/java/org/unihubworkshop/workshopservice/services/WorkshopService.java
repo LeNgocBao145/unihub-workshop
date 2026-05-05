@@ -1,15 +1,25 @@
 package org.unihubworkshop.workshopservice.services;
 
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.unihubworkshop.workshopservice.dto.CreateWorkshopRequest;
+import org.unihubworkshop.workshopservice.dto.StatisticsResponse;
 import org.unihubworkshop.workshopservice.dto.UpdateWorkshopRequest;
 import org.unihubworkshop.workshopservice.dto.WorkshopResponse;
+import org.unihubworkshop.workshopservice.dto.WorkshopSimpleResponse;
+import org.unihubworkshop.workshopservice.dto.WorkshopPaymentResponse;
 import org.unihubworkshop.workshopservice.exceptions.InvalidWorkshopException;
 import org.unihubworkshop.workshopservice.exceptions.ResourceNotFoundException;
 import org.unihubworkshop.workshopservice.mapper.WorkshopMapper;
 import org.unihubworkshop.workshopservice.models.Workshop;
 import org.unihubworkshop.workshopservice.repositories.WorkshopRepository;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Page;
+import org.unihubworkshop.workshopservice.exceptions.NotFoundException;
+
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 @Service
@@ -37,8 +47,32 @@ public class WorkshopService {
         return workshopMapper.toResponse(workshop);
     }
     @Transactional(readOnly = true)
-    public List<WorkshopResponse> getAllWorkshops() {
-        return workshopRepository.findAll()
+       public List<WorkshopResponse> getAllWorkshops(
+        String name,
+        LocalDateTime startDate,
+        LocalDateTime endDate,
+        int page,
+        int size
+    ) {
+            Pageable pageable = PageRequest.of(page, size);
+
+    Specification<Workshop> spec = (root, query, cb) -> cb.conjunction();
+
+    if (name != null && !name.isEmpty()) {
+        spec = spec.and((root, query, cb) ->
+                cb.like(cb.lower(root.get("name")), "%" + name.toLowerCase() + "%"));
+    }
+
+    if (startDate != null) {
+        spec = spec.and((root, query, cb) ->
+                cb.greaterThanOrEqualTo(root.get("startAt"), startDate));
+    }
+
+    if (endDate != null) {
+        spec = spec.and((root, query, cb) ->
+                cb.lessThanOrEqualTo(root.get("endAt"), endDate));
+    }
+        return workshopRepository.findAll(spec, pageable)
                 .stream()
                 .map(workshopMapper::toResponse)
                 .toList();
@@ -77,10 +111,33 @@ public class WorkshopService {
         findWorkshopById(id);
         workshopRepository.deleteById(id);
     }
+    
+    @Transactional(readOnly = true)
+    public StatisticsResponse getStatistics() {
+        List<Workshop> allWorkshops = workshopRepository.findAll();
+        
+        long totalWorkshops = allWorkshops.size();
+        long totalRegistrations = allWorkshops.stream()
+                .mapToLong(w -> (long) w.getTotalSlots() - w.getAvailableSlots())
+                .sum();
+                
+        List<WorkshopSimpleResponse> simpleWorkshops = allWorkshops.stream()
+                .map(workshopMapper::toSimpleResponse)
+                .toList();
+                
+        return new StatisticsResponse(totalWorkshops, totalRegistrations, simpleWorkshops);
+    }
+
+    @Transactional(readOnly = true)
+    public WorkshopPaymentResponse getWorkshopPaymentInfo(UUID id) {
+        Workshop workshop = findWorkshopById(id);
+        return workshopMapper.toPaymentResponse(workshop);
+    }
+
     private Workshop findWorkshopById(UUID id) {
         return workshopRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        String.format(WORKSHOP_NOT_FOUND, id)));
+                 .orElseThrow(() -> new NotFoundException("Workshop not found"));
+
     }
     private void validateSlots(Integer totalSlots, Integer availableSlots) {
         if (totalSlots <= 0) {

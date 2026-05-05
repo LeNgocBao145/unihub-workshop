@@ -4,6 +4,8 @@ import org.springframework.stereotype.Component;
 import org.unihubworkshop.workshopservice.dto.CreateWorkshopRequest;
 import org.unihubworkshop.workshopservice.dto.UpdateWorkshopRequest;
 import org.unihubworkshop.workshopservice.dto.WorkshopResponse;
+import org.unihubworkshop.workshopservice.dto.WorkshopSimpleResponse;
+import org.unihubworkshop.workshopservice.dto.WorkshopPaymentResponse;
 import org.unihubworkshop.workshopservice.models.Workshop;
 
 @Component
@@ -74,6 +76,23 @@ public class WorkshopMapper {
         response.setEndAt(workshop.getEndAt());
         response.setCreatedAt(workshop.getCreatedAt());
         response.setUpdatedAt(workshop.getUpdatedAt());
+        return response;
+    }
+
+    public WorkshopSimpleResponse toSimpleResponse(Workshop workshop) {
+        WorkshopSimpleResponse response = new WorkshopSimpleResponse();
+        response.setId(workshop.getId());
+        response.setName(workshop.getName());
+        response.setAvailableSlots(workshop.getAvailableSlots());
+        response.setTotalSlots(workshop.getTotalSlots());
+        return response;
+    }
+    
+    public WorkshopPaymentResponse toPaymentResponse(Workshop workshop) {
+        WorkshopPaymentResponse response = new WorkshopPaymentResponse();
+        response.setId(workshop.getId());
+        response.setName(workshop.getName());
+        response.setPrice(workshop.getPrice());
         return response;
     }
 }
