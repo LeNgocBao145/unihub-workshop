@@ -15,10 +15,9 @@ import java.util.Date;
 @Service
 public class JwtService {
 
-    // Lấy secret key từ application.yml (Nên dài ít nhất 256-bit)
-    @Value("${jwt.secret:404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}")
+    @Value("${jwt.secret}")
     private String secret;
-    @Value("${jwt.expiration:86400000}") // 1 ngày
+    @Value("${jwt.expiration}")
     private long jwtExpiration;
 
     private Key getSignInKey() {
@@ -28,7 +27,7 @@ public class JwtService {
     public String generateToken(User user) {
         return Jwts.builder()
                 .setSubject(user.getId().toString())
-                .claim("userId", user.getId()) // Nhét userId vào payload để API Gateway đọc
+                .claim("userId", user.getId())
                 .claim("role", user.getRole())
                 .setIssuedAt(new Date(System.currentTimeMillis()))
                 .setExpiration(new Date(System.currentTimeMillis() + jwtExpiration))

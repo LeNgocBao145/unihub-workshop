@@ -5,12 +5,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.unihubworkshop.authservice.dto.request.LoginRequest;
-import org.unihubworkshop.authservice.dto.request.LogoutRequest;
-import org.unihubworkshop.authservice.dto.request.RefreshTokenRequest;
 import org.unihubworkshop.authservice.dto.request.RegisterRequest;
-import org.unihubworkshop.authservice.dto.response.LoginResponse;
-import org.unihubworkshop.authservice.dto.response.RefreshTokenResponse;
-import org.unihubworkshop.authservice.dto.response.RegisterResponse;
+import org.unihubworkshop.authservice.dto.response.*;
 import org.unihubworkshop.authservice.enums.Provider;
 import org.unihubworkshop.authservice.enums.Role;
 import org.unihubworkshop.authservice.mapper.UserMapper;
@@ -38,7 +34,7 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     @Transactional
-    public LoginResponse login(LoginRequest request) {
+    public LoginBeforeResponse login(LoginRequest request) {
 
         Account account = accountRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy tài khoản!"));
@@ -64,23 +60,29 @@ public class AuthServiceImpl implements AuthService {
         refreshTokenRepository.deleteByUser(user);
         RefreshToken refreshToken = refreshTokenService.createRefreshToken(user.getId());
 
-        return LoginResponse.builder()
+        return LoginBeforeResponse.builder()
                 .accessToken(accessToken)
                 .refreshToken(refreshToken.getToken())
+                .user(
+                        UserProfileResponse.builder()
+                                .name(user.getName())
+                                .email(account.getEmail())
+                                .role(user.getRole().toString())
+                                .build())
                 .message("Đăng nhập thành công")
                 .build();
     }
 
     @Override
-    public RefreshTokenResponse refreshToken(RefreshTokenRequest request) {
-        String requestRefreshToken = request.getRefreshToken();
-
+    public RefreshTokenResponse refreshToken(String requestRefreshToken) {
+        IO.println(requestRefreshToken);
         return refreshTokenRepository.findByToken(requestRefreshToken)
-                .map(refreshTokenService::verifyExpiration) // Kiểm tra hết hạn chưa
-                .map(RefreshToken::getUser) // Nếu ok, lấy User ra
+                .map(refreshTokenService::verifyExpiration)
+                .map(RefreshToken::getUser)
                 .map(user -> {
                     // Tạo Access Token mới
                     String newAccessToken = jwtService.generateToken(user);
+                    IO.println(newAccessToken);
                     return RefreshTokenResponse.builder()
                             .accessToken(newAccessToken)
                             .message("Làm mới token thành công")
@@ -121,9 +123,8 @@ public class AuthServiceImpl implements AuthService {
                 .build();
     }
     @Override
-    public void logout(LogoutRequest request) {
-        // Tìm và xóa Refresh Token khỏi Database
-        refreshTokenRepository.findByToken(request.getRefreshToken())
+    public void logout(String refreshToken) {
+        refreshTokenRepository.findByToken(refreshToken)
                 .ifPresent(refreshTokenRepository::delete);
     }
 }

@@ -2,6 +2,7 @@ package org.unihubworkshop.apigateway.filters;
 
 
 
+import org.springframework.http.HttpMethod;
 import org.unihubworkshop.apigateway.utils.JwtUtil;
 import io.jsonwebtoken.Claims;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -41,14 +42,17 @@ public class AuthenticationGatewayFilterFactory extends AbstractGatewayFilterFac
     @Override
     public GatewayFilter apply(Config config) {
         return ((exchange, chain) -> {
+            if (exchange.getRequest().getMethod() == HttpMethod.OPTIONS) {
+                return chain.filter(exchange);
+            }
             String path = exchange.getRequest().getURI().getPath();
 
-            // 1. Kiểm tra xem route có cần xác thực không
+
             if (!routeValidator.isSecured(path)) {
                 return chain.filter(exchange);
             }
 
-            // 2. Lấy và kiểm tra định dạng Token
+
             String authHeader = exchange.getRequest().getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
 
             if (authHeader == null || !authHeader.startsWith("Bearer ")) {
@@ -56,24 +60,18 @@ public class AuthenticationGatewayFilterFactory extends AbstractGatewayFilterFac
             }
 
             String token = authHeader.substring(7);
+
             try {
 
-
                 jwtUtil.validateToken(token);
-
                 Claims claims = jwtUtil.getClaims(token);
-
-
                 String userId = claims.getSubject();
                 String role = claims.get("role", String.class);
 
-
-                // 4. LOGIC RBAC CHÍNH: Ủy quyền cho RouteValidator kiểm tra
                 if (!routeValidator.isAuthorized(path, role)) {
                     return onError(exchange, "Bạn không có quyền truy cập hệ thống này", HttpStatus.FORBIDDEN);
                 }
 
-                // 5. Đính header và cho request đi tiếp xuống Microservices
                 ServerWebExchange mutatedExchange = exchange.mutate()
                         .request(exchange.getRequest().mutate()
                                 .header("X-User-Id", userId)

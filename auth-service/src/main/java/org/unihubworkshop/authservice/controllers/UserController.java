@@ -12,13 +12,13 @@ import org.unihubworkshop.authservice.services.UserService;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/users")
+@RequestMapping("/auth")
 @RequiredArgsConstructor
 public class UserController {
 
     private final UserService userService; // Có thể gọi qua UserService nếu hệ thống phức tạp
 
-    @GetMapping("/me")
+    @GetMapping("users/me")
     public ResponseEntity<UserProfileResponse> getCurrentUser(
             @RequestHeader("X-User-Id") UUID userId
     ) {

@@ -22,10 +22,10 @@ public class UserServiceImpl implements UserService {
     public UserProfileResponse getUserProfile(UUID userId) {
         // 1. Tìm user trong Database
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng với ID: " + userId));
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
         Account account = accountRepository.findFirstByUserId(userId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy tài khoản liên kết!"));
-        // 2. Map từ Entity sang DTO để giấu Password đi
+
         return UserProfileResponse.builder()
                 .name(user.getName())
                 .email(account.getEmail())
