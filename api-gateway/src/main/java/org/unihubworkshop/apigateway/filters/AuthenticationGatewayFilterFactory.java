@@ -66,6 +66,7 @@ public class AuthenticationGatewayFilterFactory extends AbstractGatewayFilterFac
                 jwtUtil.validateToken(token);
                 Claims claims = jwtUtil.getClaims(token);
                 String userId = claims.getSubject();
+                String email = claims.get("email", String.class);
                 String role = claims.get("role", String.class);
 
                 if (!routeValidator.isAuthorized(path, role)) {
@@ -75,6 +76,7 @@ public class AuthenticationGatewayFilterFactory extends AbstractGatewayFilterFac
                 ServerWebExchange mutatedExchange = exchange.mutate()
                         .request(exchange.getRequest().mutate()
                                 .header("X-User-Id", userId)
+                                .header("X-User-Email", email)
                                 .header("X-User-Role", role)
                                 .build())
                         .build();

@@ -39,7 +39,7 @@ public class Payment {
     @Column(nullable = false)
     private PaymentProvider provider;
 
-    @Column(length = 50)
+    @Column(length = 20)
     private String gateway;
 
     @Column(unique = true, length = 255)
@@ -62,5 +62,8 @@ public class Payment {
     @UpdateTimestamp
     @Column(nullable = false)
     private LocalDateTime updatedAt;
+
+    @Column(nullable = true)
+    private LocalDateTime expiredAt;
 }
 

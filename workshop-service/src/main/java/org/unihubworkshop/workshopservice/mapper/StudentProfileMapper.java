@@ -9,11 +9,11 @@ public class StudentProfileMapper {
 
     public StudentProfileResponse toResponse(StudentProfile studentProfile) {
         StudentProfileResponse dto = new StudentProfileResponse();
+        dto.setUserId(studentProfile.getUserId());
         dto.setStudentCode(studentProfile.getStudentCode());
         dto.setDepartment(studentProfile.getDepartment());
         dto.setMajor(studentProfile.getMajor());
         dto.setClassName(studentProfile.getClassName());
-        dto.setUserId(studentProfile.getUserId());
 
         return dto;
     }

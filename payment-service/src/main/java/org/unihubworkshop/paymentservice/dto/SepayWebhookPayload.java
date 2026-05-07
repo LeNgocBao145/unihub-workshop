@@ -4,28 +4,44 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.math.BigDecimal;
 
 public record SepayWebhookPayload(
-        @JsonProperty("transaction_id")
-        String transactionId,
+        @JsonProperty("id")
+        Long id,
 
-        @JsonProperty("reference_code")
-        String referenceCode,
+        @JsonProperty("gateway")
+        String gateway,
 
-        @JsonProperty("account_number")
+        @JsonProperty("transactionDate")
+        String transactionDate,
+
+        @JsonProperty("accountNumber")
         String accountNumber,
 
-        @JsonProperty("amount")
-        BigDecimal amount,
+        @JsonProperty("subAccount")
+        String subAccount,
+
+        @JsonProperty("transferAmount")
+        BigDecimal transferAmount,
 
         @JsonProperty("content")
         String content,
 
-        @JsonProperty("transfer_type")
+        @JsonProperty("transferType")
         String transferType,
 
-        @JsonProperty("transfer_date")
-        String transferDate,
+        @JsonProperty("referenceCode")
+        String referenceCode,
 
         @JsonProperty("description")
-        String description
-) {}
+        String description,
 
+        @JsonProperty("accumulated")
+        BigDecimal accumulated
+) {
+    public BigDecimal amount() {
+        return transferAmount;
+    }
+
+    public String transactionId() {
+        return id != null ? id.toString() : null;
+    }
+}

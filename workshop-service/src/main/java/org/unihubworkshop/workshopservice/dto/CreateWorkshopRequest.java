@@ -14,7 +14,6 @@ import java.util.UUID;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
 public class CreateWorkshopRequest {
 
     @NotBlank(message = "Workshop name is required")

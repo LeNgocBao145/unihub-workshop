@@ -1,7 +1,8 @@
 package org.unihubworkshop.paymentservice.clients;
 
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.unihubworkshop.paymentservice.exceptions.SepayException;
@@ -10,17 +11,18 @@ import java.math.BigDecimal;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 
-@Slf4j
 @Component
 @RequiredArgsConstructor
 public class SepayClient {
+    private static final Logger log = LoggerFactory.getLogger(
+            SepayClient.class);
 
     private static final String SEPAY_QR_BASE_URL = "https://qr.sepay.vn/img";
 
-    @Value("${sepay.account-number:}")
+    @Value("${sepay.account-number}")
     private String accountNumber;
 
-    @Value("${sepay.bank:MBBANK}")
+    @Value("${sepay.bank}")
     private String bank;
 
     public String generateQRCode(BigDecimal amount, String description) {
