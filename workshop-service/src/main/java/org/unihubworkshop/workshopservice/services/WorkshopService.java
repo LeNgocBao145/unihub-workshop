@@ -25,7 +25,7 @@ import org.unihubworkshop.workshopservice.exceptions.AccessDeniedException;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
-
+import org.unihubworkshop.workshopservice.services.AiSummaryProducerService;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -36,11 +36,13 @@ public class WorkshopService {
     private final WorkshopMapper workshopMapper;
     private static final String WORKSHOP_NOT_FOUND = "Workshop with ID %s not found";
     private final ImageService imageService;
+    private final AiSummaryProducerService aiSummaryProducerService;
     public WorkshopService(WorkshopRepository workshopRepository,
-                           WorkshopMapper workshopMapper, ImageService imageService){
+                           WorkshopMapper workshopMapper, ImageService imageService, AiSummaryProducerService aiSummaryProducerService){
         this.workshopMapper = workshopMapper;
         this.workshopRepository = workshopRepository;
         this.imageService = imageService;
+        this.aiSummaryProducerService = aiSummaryProducerService;
     }
 
     public WorkshopResponse createWorkshop(UUID userId, CreateWorkshopRequest request) throws IOException {
@@ -53,6 +55,9 @@ public class WorkshopService {
         String mapUrl = imageService.uploadMap(request.getRoomMap());
         workshop.setRoomMap(mapUrl);
         Workshop savedWorkshop = workshopRepository.save(workshop);
+        if (pdfUrl != null && !pdfUrl.isEmpty()) {
+            aiSummaryProducerService.submitPdfForSummary(savedWorkshop.getId(), pdfUrl);
+        }
         return workshopMapper.toResponse(savedWorkshop);
 
     }

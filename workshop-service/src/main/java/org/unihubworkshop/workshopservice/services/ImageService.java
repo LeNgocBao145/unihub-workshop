@@ -51,7 +51,7 @@ public class ImageService {
         s3Client.putObject(putObjectRequest,
                 RequestBody.fromInputStream(file.getInputStream(), file.getSize()));
 
-        return endpoint + "/" + uniqueFileName;
+        return  uniqueFileName;
     }
 
 
@@ -80,7 +80,7 @@ public class ImageService {
         s3Client.putObject(putObjectRequest,
                 RequestBody.fromInputStream(file.getInputStream(), file.getSize()));
 
-        return endpoint + "/" + uniqueFileName;
+        return uniqueFileName;
     }
 
 }
