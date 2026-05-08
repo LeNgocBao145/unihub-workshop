@@ -28,6 +28,7 @@
           <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.46/lombok-1.18.46.jar" />
         </processorPath>
         <module name="workshop-service" />
+        <module name="data-import-service" />
         <module name="auth-service" />
       </profile>
     </annotationProcessing>
@@ -36,6 +37,7 @@
     <option name="ADDITIONAL_OPTIONS_OVERRIDE">
       <module name="api-gateway" options="-parameters" />
       <module name="auth-service" options="-parameters" />
+      <module name="data-import-service" options="-parameters" />
       <module name="notification-service" options="-parameters" />
       <module name="payment-service" options="-parameters" />
       <module name="workshop-service" options="-parameters" />
