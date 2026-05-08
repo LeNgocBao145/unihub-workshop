@@ -23,10 +23,16 @@ public class Registration {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
+    @Column(name = "workshop_id", nullable = false)
+    private UUID workshopId;
+
+
+    @Column(name = "user_id", nullable = false)
+    private UUID userId;
 
 
     @ManyToOne
-    @JoinColumn(name = "user_id", nullable = false)
+    @JoinColumn(name = "user_id", nullable = false, insertable = false, updatable = false)
     private User user;
 
     @Enumerated(EnumType.STRING)
@@ -48,6 +54,6 @@ public class Registration {
     private LocalDateTime updatedAt;
 
     @ManyToOne
-    @JoinColumn(name = "workshop_id")
+    @JoinColumn(name = "workshop_id", insertable = false, updatable = false)
     private Workshop workshop;
 }

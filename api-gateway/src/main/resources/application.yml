@@ -7,6 +7,7 @@ spring:
       server:
         webflux:
           routes:
+            ## Workshop Service Routes
             ## REST CLIENT -> http://localhost:4000/api/workshops
             ## API GATEWAY -> http://workshop-service:4002/workshops
             - id: workshop-service-route
@@ -17,8 +18,31 @@ spring:
                 - StripPrefix=1
                 - Authentication
 
-              ## REST-CLIENT -> http://localhost:4000/api-docs/workshops
-              ## API-GATEWAY -> http://workshop-service:4002/v3/api-docs
+            ## Tickets Routes
+            ## REST CLIENT -> http://localhost:4000/api/tickets
+            ## API GATEWAY -> http://workshop-service:4002/tickets
+            - id: ticket-service-route
+              uri: http://localhost:4002
+              predicates:
+                - Path=/api/tickets/**
+              filters:
+                - StripPrefix=1
+                - Authentication
+
+            ## Student Profiles Routes
+            ## REST CLIENT -> http://localhost:4000/api/students
+            ## API GATEWAY -> http://workshop-service:4002/students
+            - id: student-profile-service-route
+              uri: http://localhost:4002
+              predicates:
+                - Path=/api/students/**
+              filters:
+                - StripPrefix=1
+                - Authentication
+
+            ## API Docs - Workshop Service
+            ## REST-CLIENT -> http://localhost:4000/api-docs/workshops
+            ## API-GATEWAY -> http://workshop-service:4002/v3/api-docs
             - id: api-docs-workshop-route
               uri: http://workshop-service:4002
               predicates:
@@ -26,6 +50,9 @@ spring:
               filters:
                 - RewritePath=/api-docs/workshops,/v3/api-docs
 
+            ## Auth Service Routes
+            ## REST CLIENT -> http://localhost:4000/api/auth/**
+            ## API GATEWAY -> http://auth-service:4001/auth/**
             - id: auth-service-route
               uri: http://localhost:4001
               predicates:
@@ -34,6 +61,7 @@ spring:
                 - StripPrefix=1
                 - Authentication
 
+            ## API Docs - Auth Service
             - id: api-docs-auth-route
               uri: http://auth-service:4001
               predicates:
@@ -41,6 +69,36 @@ spring:
               filters:
                 - RewritePath=/api-docs/auth,/v3/api-docs
 
+            ## Payment Webhook Route (No Authentication)
+            ## SEPAY -> http://localhost:4000/api/payments/webhook
+            ## API GATEWAY -> http://payment-service:4003/api/payments/webhook
+            - id: payment-webhook-route
+              uri: http://localhost:4003
+              predicates:
+                - Path=/api/payments/webhook/**
+
+            ## Payment Service Routes
+            ## REST CLIENT -> http://localhost:4000/api/payments
+            ## API GATEWAY -> http://payment-service:4003/api/payments
+            - id: payment-service-route
+              uri: http://localhost:4003
+              predicates:
+                - Path=/api/payments/**
+              filters:
+                - Authentication
+
+            ## API Docs - Payment Service
+            - id: api-docs-payment-route
+              uri: http://payment-service:4003
+              predicates:
+                - Path=/api-docs/payments
+              filters:
+                - RewritePath=/api-docs/payments,/v3/api-docs
+
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
 logging:
   level:
     org.springframework.cloud.gateway: TRACE

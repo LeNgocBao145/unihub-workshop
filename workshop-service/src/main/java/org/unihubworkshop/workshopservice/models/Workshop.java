@@ -2,12 +2,16 @@ package org.unihubworkshop.workshopservice.models;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -48,8 +52,7 @@ public class Workshop {
     @Column(nullable = false)
     private Integer availableSlots;
 
-    @Column(nullable = false)
-    private String speaker;
+
 
     @Size(max = 1000, message = "Description must be less than 1000 characters")
     @Column(columnDefinition = "TEXT")
@@ -62,6 +65,12 @@ public class Workshop {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private WorkshopType type = WorkshopType.FREE;
+
+    @Size(max = 500, message = "Pdf URL must be less than 500 characters")
+    private String pdfUrl;
+
+    @Size(max = 100, message = "Speaker must be less than 100 characters")
+    private String speaker;
 
     private LocalDateTime startAt;
 
@@ -88,5 +97,13 @@ public class Workshop {
             availableSlots = totalSlots;
         }
     }
+
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+            name = "workshop_speakers",
+            joinColumns = @JoinColumn(name = "workshop_id"),
+            inverseJoinColumns = @JoinColumn(name = "speaker_id")
+    )
+    private List<Speaker> speakers;
 }
 

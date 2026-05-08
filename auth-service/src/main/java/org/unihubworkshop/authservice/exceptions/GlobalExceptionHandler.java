@@ -7,8 +7,8 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
-import org.unihubworkshop.workshopservice.exceptions.InvalidWorkshopException;
-import org.unihubworkshop.workshopservice.exceptions.ResourceNotFoundException;
+import org.unihubworkshop.authservice.exceptions.InvalidWorkshopException;
+import org.unihubworkshop.authservice.exceptions.ResourceNotFoundException;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;

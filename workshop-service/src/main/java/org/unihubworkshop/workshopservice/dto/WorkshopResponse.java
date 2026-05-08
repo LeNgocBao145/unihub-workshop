@@ -21,9 +21,9 @@ public class WorkshopResponse {
     private UUID hostId;
     private String room;
     private String roomMap;
+    private String speaker;
     private Integer totalSlots;
     private Integer availableSlots;
-    private String speaker;
     private String description;
     private BigDecimal price;
     private WorkshopType type;
@@ -32,5 +32,6 @@ public class WorkshopResponse {
     private LocalDateTime endAt;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+
 }
 

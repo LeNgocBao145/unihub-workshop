@@ -8,10 +8,14 @@ import org.unihubworkshop.workshopservice.common.ApiResponse;
 import org.unihubworkshop.workshopservice.common.PageResponse;
 import org.unihubworkshop.workshopservice.dto.CreateWorkshopRequest;
 import org.unihubworkshop.workshopservice.dto.StatisticsResponse;
+import org.unihubworkshop.workshopservice.dto.TicketResponse;
 import org.unihubworkshop.workshopservice.dto.UpdateWorkshopRequest;
 import org.unihubworkshop.workshopservice.dto.WorkshopResponse;
 import org.unihubworkshop.workshopservice.dto.WorkshopPaymentResponse;
+import org.unihubworkshop.workshopservice.services.TicketService;
 import org.unihubworkshop.workshopservice.services.WorkshopService;
+
+import java.io.IOException;
 import java.time.LocalDateTime;
 
 
@@ -23,15 +27,27 @@ import java.util.UUID;
 public class WorkshopController {
 
     private final WorkshopService workshopService;
+    private final TicketService ticketService;
 
-    public WorkshopController(WorkshopService workshopService) {
+    public WorkshopController(WorkshopService workshopService, TicketService ticketService) {
         this.workshopService = workshopService;
+        this.ticketService = ticketService;
     }
 
     @PostMapping
-    public ResponseEntity<WorkshopResponse> createWorkshop(
-            @Valid @RequestBody CreateWorkshopRequest request) {
-        WorkshopResponse response = workshopService.createWorkshop(request);
+    public ResponseEntity<WorkshopResponse> createWorkshop( @RequestHeader("X-User-Id") UUID userId,
+            @Valid @ModelAttribute CreateWorkshopRequest request) throws IOException {
+
+            WorkshopResponse response = workshopService.createWorkshop(userId, request);
+            return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @PostMapping("/{id}/tickets")
+    public ResponseEntity<ApiResponse<TicketResponse>> bookTicket(
+            @PathVariable UUID id) {
+        TicketResponse data = ticketService.bookTicket(id);
+        ApiResponse<TicketResponse> response =
+                new ApiResponse<>(true, "Ticket booked successfully", data);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
@@ -101,15 +117,18 @@ public class WorkshopController {
 
     @PutMapping("/{id}")
     public ResponseEntity<WorkshopResponse> updateWorkshop(
+            @RequestHeader("X-User-Id") UUID userId,
             @PathVariable UUID id,
             @Valid @RequestBody UpdateWorkshopRequest request) {
-        WorkshopResponse response = workshopService.updateWorkshop(id, request);
+        WorkshopResponse response = workshopService.updateWorkshop(userId, id, request);
         return ResponseEntity.ok(response);
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteWorkshop(@PathVariable UUID id) {
-        workshopService.deleteWorkshop(id);
+    public ResponseEntity<Void> deleteWorkshop(
+            @RequestHeader("X-User-Id") UUID userId,
+            @PathVariable UUID id) {
+        workshopService.deleteWorkshop(userId, id);
         return ResponseEntity.noContent().build();
     }
 }

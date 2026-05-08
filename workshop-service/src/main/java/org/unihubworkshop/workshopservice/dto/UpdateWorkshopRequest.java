@@ -25,23 +25,13 @@ public class UpdateWorkshopRequest {
     @Size(max = 500, message = "Room map URL must be less than 500 characters")
     private String roomMap;
 
-    @Positive(message = "Total slots must be positive")
-    private Integer totalSlots;
 
-    @PositiveOrZero(message = "Available slots must be zero or positive")
-    private Integer availableSlots;
+    @Size(max = 100, message = "Speaker must be less than 100 characters")
+    private String speaker;
+
 
     @Size(max = 1000, message = "Description must be less than 1000 characters")
     private String description;
 
-    @DecimalMin(value = "0.0", inclusive = true, message = "Price must be zero or positive")
-    @Digits(integer = 10, fraction = 2, message = "Price must have at most 10 integer digits and 2 decimal places")
-    private BigDecimal price;
-
-    private WorkshopType type;
-
-    private LocalDateTime startAt;
-
-    private LocalDateTime endAt;
 }
 

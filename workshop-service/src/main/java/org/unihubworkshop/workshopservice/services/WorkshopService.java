@@ -26,8 +26,11 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Page;
 import org.unihubworkshop.workshopservice.exceptions.NotFoundException;
 import org.springframework.data.domain.Page;
-import java.time.LocalDateTime;
+import org.unihubworkshop.workshopservice.exceptions.AccessDeniedException;
 
+import java.io.IOException;
+import java.time.LocalDateTime;
+import org.unihubworkshop.workshopservice.services.AiSummaryProducerService;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -38,19 +41,35 @@ public class WorkshopService {
     private final WorkshopMapper workshopMapper;
     private final RegistrationRepository registrationRepository;
     private static final String WORKSHOP_NOT_FOUND = "Workshop with ID %s not found";
+    private final ImageService imageService;
+    private final AiSummaryProducerService aiSummaryProducerService;
     public WorkshopService(WorkshopRepository workshopRepository,
-                           WorkshopMapper workshopMapper, RegistrationRepository registrationRepository){
+                           WorkshopMapper workshopMapper, ImageService imageService,
+                           AiSummaryProducerService aiSummaryProducerService,
+                           RegistrationRepository registrationRepository){
         this.workshopMapper = workshopMapper;
         this.workshopRepository = workshopRepository;
+        this.imageService = imageService;
+        this.aiSummaryProducerService = aiSummaryProducerService;
         this.registrationRepository = registrationRepository;
 
     }
 
-    public WorkshopResponse createWorkshop(CreateWorkshopRequest request) {
+    public WorkshopResponse createWorkshop(UUID userId, CreateWorkshopRequest request) throws IOException {
         validateSlots(request.getTotalSlots(), null);
         Workshop workshop = workshopMapper.toEntity(request);
+
+        workshop.setHostId(userId);
+        String pdfUrl = imageService.uploadWorkshopPdf(request.getPdfFile());
+        workshop.setPdfUrl(pdfUrl);
+        String mapUrl = imageService.uploadMap(request.getRoomMap());
+        workshop.setRoomMap(mapUrl);
         Workshop savedWorkshop = workshopRepository.save(workshop);
+        if (pdfUrl != null && !pdfUrl.isEmpty()) {
+            aiSummaryProducerService.submitPdfForSummary(savedWorkshop.getId(), pdfUrl);
+        }
         return workshopMapper.toResponse(savedWorkshop);
+
     }
     @Transactional(readOnly = true)
     public WorkshopResponse getWorkshopById(UUID userId, UUID workshopId) {
@@ -129,17 +148,23 @@ public class WorkshopService {
                 .map(workshopMapper::toResponse)
                 .toList();
     }
-    public WorkshopResponse updateWorkshop(UUID id, UpdateWorkshopRequest request) {
+    public WorkshopResponse updateWorkshop(UUID userId, UUID id, UpdateWorkshopRequest request) {
+
+
         Workshop workshop = findWorkshopById(id);
-        if (request.getTotalSlots() != null) {
-            validateSlots(request.getTotalSlots(), request.getAvailableSlots());
+        IO.println(request);
+        if (!workshop.getHostId().equals(userId)) {
+            throw new AccessDeniedException("Bạn không có quyền chỉnh sửa Workshop này vì bạn không phải là người tạo ra nó.");
         }
         workshopMapper.updateEntityFromRequest(request, workshop);
         Workshop updatedWorkshop = workshopRepository.save(workshop);
         return workshopMapper.toResponse(updatedWorkshop);
     }
-    public void deleteWorkshop(UUID id) {
-        findWorkshopById(id);
+    public void deleteWorkshop(UUID userId, UUID id) {
+        Workshop workshop = findWorkshopById(id);
+        if (!workshop.getHostId().equals(userId)) {
+            throw new AccessDeniedException("Bạn không có quyền xóa Workshop này vì bạn không phải là người tạo ra nó.");
+        }
         workshopRepository.deleteById(id);
     }
 

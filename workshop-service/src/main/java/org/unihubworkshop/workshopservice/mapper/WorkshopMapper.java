@@ -17,9 +17,7 @@ public class WorkshopMapper {
     public Workshop toEntity(CreateWorkshopRequest request) {
         Workshop workshop = new Workshop();
         workshop.setName(request.getName());
-        workshop.setHostId(request.getHostId());
         workshop.setRoom(request.getRoom());
-        workshop.setRoomMap(request.getRoomMap());
         workshop.setTotalSlots(request.getTotalSlots());
         workshop.setAvailableSlots(request.getTotalSlots());
         workshop.setDescription(request.getDescription());
@@ -27,6 +25,7 @@ public class WorkshopMapper {
         workshop.setType(request.getType());
         workshop.setStartAt(request.getStartAt());
         workshop.setEndAt(request.getEndAt());
+        workshop.setSpeaker(request.getSpeaker());
         return workshop;
     }
 
@@ -40,26 +39,13 @@ public class WorkshopMapper {
         if (request.getRoomMap() != null) {
             workshop.setRoomMap(request.getRoomMap());
         }
-        if (request.getTotalSlots() != null) {
-            workshop.setTotalSlots(request.getTotalSlots());
-        }
-        if (request.getAvailableSlots() != null) {
-            workshop.setAvailableSlots(request.getAvailableSlots());
-        }
+
         if (request.getDescription() != null) {
             workshop.setDescription(request.getDescription());
         }
-        if (request.getPrice() != null) {
-            workshop.setPrice(request.getPrice());
-        }
-        if (request.getType() != null) {
-            workshop.setType(request.getType());
-        }
-        if (request.getStartAt() != null) {
-            workshop.setStartAt(request.getStartAt());
-        }
-        if (request.getEndAt() != null) {
-            workshop.setEndAt(request.getEndAt());
+
+        if (request.getSpeaker() != null) {
+            workshop.setSpeaker(request.getSpeaker());
         }
     }
 
