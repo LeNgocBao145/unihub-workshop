@@ -11,6 +11,8 @@ import org.unihubworkshop.workshopservice.dto.UpdateWorkshopRequest;
 import org.unihubworkshop.workshopservice.dto.WorkshopResponse;
 import org.unihubworkshop.workshopservice.dto.WorkshopPaymentResponse;
 import org.unihubworkshop.workshopservice.services.WorkshopService;
+import org.springframework.web.multipart.MultipartFile;
+import org.unihubworkshop.workshopservice.services.ImportService;
 import java.time.LocalDateTime;
 
 
@@ -22,9 +24,18 @@ import java.util.UUID;
 public class WorkshopController {
 
     private final WorkshopService workshopService;
+    private final ImportService importService;
 
-    public WorkshopController(WorkshopService workshopService) {
+    public WorkshopController(WorkshopService workshopService, ImportService importService) {
         this.workshopService = workshopService;
+        this.importService = importService;
+    }
+
+    @PostMapping("/import-csv")
+    public ResponseEntity<ApiResponse<String>> importCsv(@RequestParam("file") MultipartFile file) {
+        String message = importService.uploadAndPublish(file);
+        ApiResponse<String> response = new ApiResponse<>(true, "File queued for import", message);
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping
