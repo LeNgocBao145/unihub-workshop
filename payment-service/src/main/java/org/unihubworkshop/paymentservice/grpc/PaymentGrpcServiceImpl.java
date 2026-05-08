@@ -45,16 +45,12 @@ public class PaymentGrpcServiceImpl extends PaymentServiceGrpc.PaymentServiceImp
             BigDecimal amount = new BigDecimal(request.getAmount());
             String userEmail = request.getUserEmail();
 
-            if(paymentEmailCache.getEmail(registrationId) == null){
-                paymentEmailCache.putEmail(registrationId, userEmail);
-            }
-
             ChargePaymentRequest chargeRequest = new ChargePaymentRequest(
                     registrationId,
                     amount
             );
 
-            ChargePaymentResponse chargeResponse = paymentService.chargePayment(chargeRequest);
+            ChargePaymentResponse chargeResponse = paymentService.chargePayment(chargeRequest, userEmail);
 
             PaymentQRCodeResponse response = PaymentQRCodeResponse.newBuilder()
                     .setPaymentId(chargeResponse.paymentId().toString())

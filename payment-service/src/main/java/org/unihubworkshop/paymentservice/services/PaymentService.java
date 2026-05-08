@@ -39,7 +39,7 @@ public class PaymentService {
     private final PaymentEmailCache paymentEmailCache;
 
     @Transactional
-    public ChargePaymentResponse chargePayment(ChargePaymentRequest request) {
+    public ChargePaymentResponse chargePayment(ChargePaymentRequest request, String userEmail) {
         log.info("Processing charge payment for registration: {}", request.registrationId());
 
         // Check if there's a valid pending payment (not expired) for this registration
@@ -76,6 +76,10 @@ public class PaymentService {
 
         Payment savedPayment = paymentRepository.save(payment);
         log.info("Payment created with ID: {}", savedPayment.getId());
+
+        if(paymentEmailCache.getEmail(savedPayment.getId()) == null){
+            paymentEmailCache.putEmail(savedPayment.getId(), userEmail);
+        }
 
         // Generate QR code
         String qrCodeUrl = sepayClient.generateQRCode(
@@ -120,7 +124,7 @@ public class PaymentService {
         String userEmail = paymentEmailCache.getEmail(paymentId);
         if (userEmail == null) {
             log.warn("User email not found in cache for payment ID: {}", paymentId);
-            userEmail = ""; // Default fallback
+            return;
         }
 
         // Publish events to RabbitMQ
