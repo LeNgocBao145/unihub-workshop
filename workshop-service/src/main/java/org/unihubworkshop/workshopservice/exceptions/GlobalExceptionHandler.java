@@ -20,12 +20,13 @@ public class GlobalExceptionHandler {
             ResourceNotFoundException ex,
             WebRequest request) {
 
-        ErrorResponse errorResponse = new ErrorResponse();
-        errorResponse.setMessage(ex.getMessage());
-        errorResponse.setStatus(HttpStatus.NOT_FOUND.value());
-        errorResponse.setTimestamp(LocalDateTime.now());
-        errorResponse.setPath(request.getDescription(false).replace("uri=", ""));
-        errorResponse.setError(HttpStatus.NOT_FOUND.getReasonPhrase());
+        ErrorResponse errorResponse = new ErrorResponse(
+                ex.getMessage(),
+                HttpStatus.NOT_FOUND.value(),
+                LocalDateTime.now(),
+                request.getDescription(false).replace("uri=", ""),
+                HttpStatus.NOT_FOUND.getReasonPhrase()
+        );
 
         return new ResponseEntity<>(errorResponse, HttpStatus.NOT_FOUND);
     }
@@ -35,14 +36,49 @@ public class GlobalExceptionHandler {
             InvalidWorkshopException ex,
             WebRequest request) {
 
-        ErrorResponse errorResponse = new ErrorResponse();
-        errorResponse.setMessage(ex.getMessage());
-        errorResponse.setStatus(HttpStatus.BAD_REQUEST.value());
-        errorResponse.setTimestamp(LocalDateTime.now());
-        errorResponse.setPath(request.getDescription(false).replace("uri=", ""));
-        errorResponse.setError(HttpStatus.BAD_REQUEST.getReasonPhrase());
+        ErrorResponse errorResponse = new ErrorResponse(
+                ex.getMessage(),
+                HttpStatus.BAD_REQUEST.value(),
+                LocalDateTime.now(),
+                request.getDescription(false).replace("uri=", ""),
+                HttpStatus.BAD_REQUEST.getReasonPhrase()
+        );
 
         return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(NotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleNotFoundException(
+            NotFoundException ex,
+            WebRequest request) {
+
+        ErrorResponse errorResponse = new ErrorResponse(
+                ex.getMessage(),
+                HttpStatus.NOT_FOUND.value(),
+                LocalDateTime.now(),
+                request.getDescription(false).replace("uri=", ""),
+                HttpStatus.NOT_FOUND.getReasonPhrase()
+        );
+
+        return new ResponseEntity<>(errorResponse, HttpStatus.NOT_FOUND);
+    }
+
+    @ExceptionHandler(RuntimeException.class)
+    public ResponseEntity<ErrorResponse> handleRuntimeException(
+            RuntimeException ex,
+            WebRequest request) {
+        
+        ex.printStackTrace();
+
+        ErrorResponse errorResponse = new ErrorResponse(
+                ex.getMessage() != null ? ex.getMessage() : "An unexpected error occurred",
+                HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                LocalDateTime.now(),
+                request.getDescription(false).replace("uri=", ""),
+                HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase()
+        );
+
+        return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -73,12 +109,13 @@ public class GlobalExceptionHandler {
             Exception ex,
             WebRequest request) {
 
-        ErrorResponse errorResponse = new ErrorResponse();
-        errorResponse.setMessage("An unexpected error occurred");
-        errorResponse.setStatus(HttpStatus.INTERNAL_SERVER_ERROR.value());
-        errorResponse.setTimestamp(LocalDateTime.now());
-        errorResponse.setPath(request.getDescription(false).replace("uri=", ""));
-        errorResponse.setError(HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase());
+        ErrorResponse errorResponse = new ErrorResponse(
+                "An unexpected error occurred",
+                HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                LocalDateTime.now(),
+                request.getDescription(false).replace("uri=", ""),
+                HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase()
+        );
 
         return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
     }

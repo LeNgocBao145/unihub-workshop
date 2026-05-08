@@ -1,0 +1,59 @@
+package org.unihubworkshop.workshopservice.cache;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.TimeUnit;
+
+/**
+ * In-memory cache implementation
+ * Useful for development and testing
+ * Not recommended for production with multiple instances
+ */
+@Component("inMemoryCacheProvider")
+public class InMemoryCacheProvider implements CacheProvider {
+    private static final Logger log = LoggerFactory.getLogger(InMemoryCacheProvider.class);
+    
+    private final Map<String, Integer> cache = new HashMap<>();
+    
+    @Override
+    public Optional<Integer> get(String key) {
+        log.debug("Getting value from in-memory cache for key: {}", key);
+        return Optional.ofNullable(cache.get(key));
+    }
+    
+    @Override
+    public void put(String key, Integer value) {
+        log.debug("Putting value in in-memory cache for key: {}", key);
+        cache.put(key, value);
+    }
+    
+    @Override
+    public void put(String key, Integer value, long timeout, TimeUnit unit) {
+        // For in-memory implementation, we ignore TTL
+        log.debug("Putting value in in-memory cache for key: {} (TTL ignored)", key);
+        cache.put(key, value);
+    }
+    
+    @Override
+    public void delete(String key) {
+        log.debug("Deleting value from in-memory cache for key: {}", key);
+        cache.remove(key);
+    }
+    
+    @Override
+    public boolean exists(String key) {
+        return cache.containsKey(key);
+    }
+    
+    @Override
+    public void clear() {
+        log.info("Clearing all in-memory cache");
+        cache.clear();
+    }
+}
+

@@ -7,9 +7,11 @@ import org.springframework.web.bind.annotation.*;
 import org.unihubworkshop.workshopservice.common.ApiResponse;
 import org.unihubworkshop.workshopservice.dto.CreateWorkshopRequest;
 import org.unihubworkshop.workshopservice.dto.StatisticsResponse;
+import org.unihubworkshop.workshopservice.dto.TicketResponse;
 import org.unihubworkshop.workshopservice.dto.UpdateWorkshopRequest;
 import org.unihubworkshop.workshopservice.dto.WorkshopResponse;
 import org.unihubworkshop.workshopservice.dto.WorkshopPaymentResponse;
+import org.unihubworkshop.workshopservice.services.TicketService;
 import org.unihubworkshop.workshopservice.services.WorkshopService;
 
 import java.io.IOException;
@@ -24,9 +26,11 @@ import java.util.UUID;
 public class WorkshopController {
 
     private final WorkshopService workshopService;
+    private final TicketService ticketService;
 
-    public WorkshopController(WorkshopService workshopService) {
+    public WorkshopController(WorkshopService workshopService, TicketService ticketService) {
         this.workshopService = workshopService;
+        this.ticketService = ticketService;
     }
 
     @PostMapping
@@ -35,6 +39,15 @@ public class WorkshopController {
 
             WorkshopResponse response = workshopService.createWorkshop(userId, request);
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @PostMapping("/{id}/tickets")
+    public ResponseEntity<ApiResponse<TicketResponse>> bookTicket(
+            @PathVariable UUID id) {
+        TicketResponse data = ticketService.bookTicket(id);
+        ApiResponse<TicketResponse> response =
+                new ApiResponse<>(true, "Ticket booked successfully", data);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @GetMapping("/{id}")
@@ -61,10 +74,12 @@ public class WorkshopController {
         @RequestParam(required = false) String name,
         @RequestParam(required = false) LocalDateTime startDate,
         @RequestParam(required = false) LocalDateTime endDate,
-        @RequestParam(defaultValue = "1") int page,
-        @RequestParam(defaultValue = "10") int size
+        @RequestParam(defaultValue = "1") String page,
+        @RequestParam(defaultValue = "10") String size
     ) {
-        List<WorkshopResponse> data = workshopService.getAllWorkshops(name, startDate, endDate, page - 1, size);
+        int pageNum = Integer.parseInt(page);
+        int sizeNum = Integer.parseInt(size);
+        List<WorkshopResponse> data = workshopService.getAllWorkshops(name, startDate, endDate, pageNum - 1, sizeNum);
 
         ApiResponse<List<WorkshopResponse>> response =
                 new ApiResponse<>(true, "Get all workshops successfully", data);
