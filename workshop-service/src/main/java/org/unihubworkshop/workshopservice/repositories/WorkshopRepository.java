@@ -12,9 +12,7 @@ import java.util.UUID;
 public interface WorkshopRepository extends JpaRepository<Workshop, UUID>, JpaSpecificationExecutor<Workshop>  {
 
     List<Workshop> findByHostId(UUID hostId);
-
     List<Workshop> findByRoom(String room);
-    
-
     List<Workshop> findByNameContainingIgnoreCase(String name);
+
 }

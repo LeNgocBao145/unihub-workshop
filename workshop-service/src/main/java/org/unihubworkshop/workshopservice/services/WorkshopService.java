@@ -21,7 +21,9 @@ import org.unihubworkshop.workshopservice.repositories.WorkshopRepository;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Page;
 import org.unihubworkshop.workshopservice.exceptions.NotFoundException;
+import org.unihubworkshop.workshopservice.exceptions.AccessDeniedException;
 
+import java.io.IOException;
 import java.time.LocalDateTime;
 
 import java.time.LocalDateTime;
@@ -33,18 +35,26 @@ public class WorkshopService {
     private final WorkshopRepository workshopRepository;
     private final WorkshopMapper workshopMapper;
     private static final String WORKSHOP_NOT_FOUND = "Workshop with ID %s not found";
-
+    private final ImageService imageService;
     public WorkshopService(WorkshopRepository workshopRepository,
-                           WorkshopMapper workshopMapper){
+                           WorkshopMapper workshopMapper, ImageService imageService){
         this.workshopMapper = workshopMapper;
         this.workshopRepository = workshopRepository;
+        this.imageService = imageService;
     }
 
-    public WorkshopResponse createWorkshop(CreateWorkshopRequest request) {
+    public WorkshopResponse createWorkshop(UUID userId, CreateWorkshopRequest request) throws IOException {
         validateSlots(request.getTotalSlots(), null);
         Workshop workshop = workshopMapper.toEntity(request);
+
+        workshop.setHostId(userId);
+        String pdfUrl = imageService.uploadWorkshopPdf(request.getPdfFile());
+        workshop.setPdfUrl(pdfUrl);
+        String mapUrl = imageService.uploadMap(request.getRoomMap());
+        workshop.setRoomMap(mapUrl);
         Workshop savedWorkshop = workshopRepository.save(workshop);
         return workshopMapper.toResponse(savedWorkshop);
+
     }
     @Transactional(readOnly = true)
     public WorkshopResponse getWorkshopById(UUID id) {
@@ -103,17 +113,23 @@ public class WorkshopService {
                 .map(workshopMapper::toResponse)
                 .toList();
     }
-    public WorkshopResponse updateWorkshop(UUID id, UpdateWorkshopRequest request) {
+    public WorkshopResponse updateWorkshop(UUID userId, UUID id, UpdateWorkshopRequest request) {
+
+
         Workshop workshop = findWorkshopById(id);
-        if (request.getTotalSlots() != null) {
-            validateSlots(request.getTotalSlots(), request.getAvailableSlots());
+        IO.println(request);
+        if (!workshop.getHostId().equals(userId)) {
+            throw new AccessDeniedException("Bạn không có quyền chỉnh sửa Workshop này vì bạn không phải là người tạo ra nó.");
         }
         workshopMapper.updateEntityFromRequest(request, workshop);
         Workshop updatedWorkshop = workshopRepository.save(workshop);
         return workshopMapper.toResponse(updatedWorkshop);
     }
-    public void deleteWorkshop(UUID id) {
-        findWorkshopById(id);
+    public void deleteWorkshop(UUID userId, UUID id) {
+        Workshop workshop = findWorkshopById(id);
+        if (!workshop.getHostId().equals(userId)) {
+            throw new AccessDeniedException("Bạn không có quyền xóa Workshop này vì bạn không phải là người tạo ra nó.");
+        }
         workshopRepository.deleteById(id);
     }
 

@@ -46,7 +46,7 @@ public class AuthenticationGatewayFilterFactory extends AbstractGatewayFilterFac
                 return chain.filter(exchange);
             }
             String path = exchange.getRequest().getURI().getPath();
-
+            String method = exchange.getRequest().getMethod().name();
 
             if (!routeValidator.isSecured(path)) {
                 return chain.filter(exchange);
@@ -67,8 +67,9 @@ public class AuthenticationGatewayFilterFactory extends AbstractGatewayFilterFac
                 Claims claims = jwtUtil.getClaims(token);
                 String userId = claims.getSubject();
                 String role = claims.get("role", String.class);
-
-                if (!routeValidator.isAuthorized(path, role)) {
+                IO.println(role);
+                if (!routeValidator.isAuthorized(method,path, role)) {
+                    IO.println(role + path + role);
                     return onError(exchange, "Bạn không có quyền truy cập hệ thống này", HttpStatus.FORBIDDEN);
                 }
 

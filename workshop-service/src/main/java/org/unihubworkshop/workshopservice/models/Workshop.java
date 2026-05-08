@@ -60,6 +60,12 @@ public class Workshop {
     @Column(nullable = false)
     private WorkshopType type = WorkshopType.FREE;
 
+    @Size(max = 500, message = "Pdf URL must be less than 500 characters")
+    private String pdfUrl;
+
+    @Size(max = 100, message = "Speaker must be less than 100 characters")
+    private String speaker;
+
     private LocalDateTime startAt;
 
     private LocalDateTime endAt;

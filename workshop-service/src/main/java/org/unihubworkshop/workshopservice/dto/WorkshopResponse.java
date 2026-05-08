@@ -20,6 +20,7 @@ public class WorkshopResponse {
     private UUID hostId;
     private String room;
     private String roomMap;
+    private String speaker;
     private Integer totalSlots;
     private Integer availableSlots;
     private String description;
@@ -29,5 +30,6 @@ public class WorkshopResponse {
     private LocalDateTime endAt;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+
 }
 

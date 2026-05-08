@@ -18,9 +18,14 @@ public class RouteValidator {
     );
 
     private static final Map<String, List<String>> ROLE_REQUIREMENTS = Map.of(
-            "^/api/admin/.*", List.of("HOST"),
-            "^/api/staff/.*", List.of("HOST", "STAFF"),
-            "^/api/workshops/.*", List.of("ATTENDEE","HOST", "STAFF")
+            "^/admin/.*", List.of("HOST"),
+            "^/staff/.*", List.of("HOST", "STAFF"),
+            "^(POST|PUT|PATCH|DELETE) /workshops.*", List.of("HOST"),
+            "^GET /workshops.*", List.of("ATTENDEE", "HOST", "STAFF"),
+            "^GET /auth/users/me", List.of("ATTENDEE", "HOST", "STAFF"),
+            "^POST /auth/logout", List.of("ATTENDEE", "HOST", "STAFF")
+
+
     );
 
 
@@ -30,14 +35,17 @@ public class RouteValidator {
     }
 
 
-    public boolean isAuthorized(String path, String userRole) {
+    public boolean isAuthorized(String method, String path, String userRole) {
+
+        String routeKey = method.toUpperCase() + " " + path;
 
         for (Map.Entry<String, List<String>> entry : ROLE_REQUIREMENTS.entrySet()) {
-            // Dùng Regex để match toàn bộ các đường dẫn con
-            if (Pattern.matches(entry.getKey(), path)) {
+            if (Pattern.matches(entry.getKey(), routeKey)) {
                 return entry.getValue().contains(userRole);
             }
         }
-        return true;
+
+
+        return false;
     }
 }

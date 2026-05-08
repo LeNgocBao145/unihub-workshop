@@ -82,4 +82,18 @@ public class GlobalExceptionHandler {
 
         return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
     }
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ErrorResponse> handleAccessDeniedException(
+            AccessDeniedException ex,
+            WebRequest request) {
+
+        ErrorResponse errorResponse = new ErrorResponse();
+        errorResponse.setMessage(ex.getMessage());
+        errorResponse.setStatus(HttpStatus.FORBIDDEN.value());
+        errorResponse.setTimestamp(LocalDateTime.now());
+        errorResponse.setPath(request.getDescription(false).replace("uri=", ""));
+        errorResponse.setError(HttpStatus.FORBIDDEN.getReasonPhrase());
+
+        return new ResponseEntity<>(errorResponse, HttpStatus.FORBIDDEN);
+    }
 }

@@ -11,6 +11,8 @@ import org.unihubworkshop.workshopservice.dto.UpdateWorkshopRequest;
 import org.unihubworkshop.workshopservice.dto.WorkshopResponse;
 import org.unihubworkshop.workshopservice.dto.WorkshopPaymentResponse;
 import org.unihubworkshop.workshopservice.services.WorkshopService;
+
+import java.io.IOException;
 import java.time.LocalDateTime;
 
 
@@ -28,10 +30,11 @@ public class WorkshopController {
     }
 
     @PostMapping
-    public ResponseEntity<WorkshopResponse> createWorkshop(
-            @Valid @RequestBody CreateWorkshopRequest request) {
-        WorkshopResponse response = workshopService.createWorkshop(request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    public ResponseEntity<WorkshopResponse> createWorkshop( @RequestHeader("X-User-Id") UUID userId,
+            @Valid @ModelAttribute CreateWorkshopRequest request) throws IOException {
+
+            WorkshopResponse response = workshopService.createWorkshop(userId, request);
+            return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @GetMapping("/{id}")
@@ -100,15 +103,18 @@ public class WorkshopController {
 
     @PutMapping("/{id}")
     public ResponseEntity<WorkshopResponse> updateWorkshop(
+            @RequestHeader("X-User-Id") UUID userId,
             @PathVariable UUID id,
             @Valid @RequestBody UpdateWorkshopRequest request) {
-        WorkshopResponse response = workshopService.updateWorkshop(id, request);
+        WorkshopResponse response = workshopService.updateWorkshop(userId, id, request);
         return ResponseEntity.ok(response);
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteWorkshop(@PathVariable UUID id) {
-        workshopService.deleteWorkshop(id);
+    public ResponseEntity<Void> deleteWorkshop(
+            @RequestHeader("X-User-Id") UUID userId,
+            @PathVariable UUID id) {
+        workshopService.deleteWorkshop(userId, id);
         return ResponseEntity.noContent().build();
     }
 }
