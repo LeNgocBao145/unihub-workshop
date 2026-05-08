@@ -10,8 +10,10 @@ import org.springframework.stereotype.Service;
 import org.unihubworkshop.grpc.PaymentQRCodeRequest;
 import org.unihubworkshop.grpc.PaymentQRCodeResponse;
 import org.unihubworkshop.grpc.PaymentServiceGrpc;
+import org.unihubworkshop.workshopservice.exceptions.PaymentServiceUnavailableException;
 
 import java.math.BigDecimal;
+import java.util.concurrent.TimeUnit;
 import java.util.UUID;
 
 /**
@@ -27,6 +29,9 @@ public class PaymentGrpcClient {
 
     @Value("${payment.service.grpc.port:9090}")
     private int paymentPort;
+
+    @Value("${payment.service.grpc.timeout-ms:1500}")
+    private long timeoutMs;
 
     private ManagedChannel channel;
     private PaymentServiceGrpc.PaymentServiceBlockingStub blockingStub;
@@ -64,7 +69,9 @@ public class PaymentGrpcClient {
                     .setUserEmail(userEmail)
                     .build();
 
-            PaymentQRCodeResponse response = blockingStub.getQRCode(request);
+                PaymentQRCodeResponse response = blockingStub
+                    .withDeadlineAfter(timeoutMs, TimeUnit.MILLISECONDS)
+                    .getQRCode(request);
             
             log.info("Successfully retrieved QR code for registration: {}. PaymentId: {}", 
                     registrationId, response.getPaymentId());
@@ -72,7 +79,10 @@ public class PaymentGrpcClient {
             return response;
         } catch (Exception e) {
             log.error("Error calling payment service for registration: {}", registrationId, e);
-            throw new RuntimeException("Failed to get QR code from payment service", e);
+            throw new PaymentServiceUnavailableException(
+                    "Payment service is temporarily unavailable. Please retry shortly.",
+                    e
+            );
         }
     }
 

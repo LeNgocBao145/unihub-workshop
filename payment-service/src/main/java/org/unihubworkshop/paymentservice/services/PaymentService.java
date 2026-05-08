@@ -35,6 +35,7 @@ public class PaymentService {
     private final PaymentRepository paymentRepository;
     private final PaymentMapper paymentMapper;
     private final SepayClient sepayClient;
+    private final PaymentResilienceService paymentResilienceService;
     private final RabbitTemplate rabbitTemplate;
     private final PaymentEmailCache paymentEmailCache;
 
@@ -82,9 +83,12 @@ public class PaymentService {
         }
 
         // Generate QR code
-        String qrCodeUrl = sepayClient.generateQRCode(
+        String qrCodeUrl = paymentResilienceService.executeWithResilience(
+            () -> sepayClient.generateQRCode(
                 savedPayment.getAmount(),
                 "UNIHUB" + savedPayment.getId()
+            ),
+            "generate-qr-code"
         );
 
         log.info("QR code generated for payment: {}", savedPayment.getId());
@@ -164,9 +168,12 @@ public class PaymentService {
     }
 
     private String generateExistingQRCode(Payment payment) {
-        return sepayClient.generateQRCode(
+        return paymentResilienceService.executeWithResilience(
+            () -> sepayClient.generateQRCode(
                 payment.getAmount(),
                 "UNIHUB" + payment.getId()
+            ),
+            "generate-existing-qr-code"
         );
     }
 

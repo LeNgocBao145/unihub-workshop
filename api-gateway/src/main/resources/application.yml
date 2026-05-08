@@ -2,6 +2,11 @@ server:
   port: 4000
 
 spring:
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      timeout: 2s
   cloud:
     gateway:
       server:
@@ -97,5 +102,12 @@ spring:
 logging:
   level:
     org.springframework.cloud.gateway: TRACE
+
+rate-limit:
+  enabled: true
+  max-requests: 60
+  window-seconds: 10
+  key-prefix: unihub:gateway:ratelimit
+
 jwt:
   secret: 404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970

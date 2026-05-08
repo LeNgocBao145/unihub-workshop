@@ -16,6 +16,7 @@ import org.unihubworkshop.workshopservice.dto.RegistrationResponse;
 import org.unihubworkshop.workshopservice.dto.TicketResponse;
 import org.unihubworkshop.workshopservice.exceptions.InvalidWorkshopException;
 import org.unihubworkshop.workshopservice.exceptions.NotFoundException;
+import org.unihubworkshop.workshopservice.exceptions.PaymentServiceUnavailableException;
 import org.unihubworkshop.workshopservice.mapper.RegistrationMapper;
 import org.unihubworkshop.workshopservice.models.Registration;
 import org.unihubworkshop.workshopservice.models.RegistrationStatus;
@@ -172,6 +173,10 @@ public class TicketService {
                     .createdAt(savedRegistration.getCreatedAt())
                     .build();
 
+        } catch (PaymentServiceUnavailableException e) {
+            log.warn("Payment service unavailable while booking workshop {}. Rolling back reserved slot.", workshopId);
+            cacheAsideService.incrementSlot(workshopId);
+            throw e;
         } catch (Exception e) {
             log.error("Error during ticket booking, rolling back slot reservation", e);
             cacheAsideService.incrementSlot(workshopId);

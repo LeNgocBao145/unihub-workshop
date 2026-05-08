@@ -37,6 +37,13 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.error("Failed to process SePay request", null));
     }
 
+        @ExceptionHandler(PaymentGatewayUnavailableException.class)
+        public ResponseEntity<ApiResponse<Void>> handlePaymentGatewayUnavailable(PaymentGatewayUnavailableException e) {
+                log.warn("Payment gateway unavailable: {}", e.getMessage());
+                return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                                .body(ApiResponse.error("Payment gateway is temporarily unavailable. Please retry shortly.", null));
+        }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiResponse<Void>> handleValidationException(MethodArgumentNotValidException e) {
         String message = e.getBindingResult().getFieldErrors().stream()
