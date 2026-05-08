@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.unihubworkshop.workshopservice.models.RegistrationStatus;
 import org.unihubworkshop.workshopservice.models.WorkshopType;
 
 import java.math.BigDecimal;
@@ -22,9 +23,11 @@ public class WorkshopResponse {
     private String roomMap;
     private Integer totalSlots;
     private Integer availableSlots;
+    private String speaker;
     private String description;
     private BigDecimal price;
     private WorkshopType type;
+    private RegistrationStatus registrationStatus;
     private LocalDateTime startAt;
     private LocalDateTime endAt;
     private LocalDateTime createdAt;

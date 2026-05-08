@@ -5,9 +5,12 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.unihubworkshop.workshopservice.common.PageResponse;
 import org.unihubworkshop.workshopservice.dto.RegistrationResponse;
+import org.unihubworkshop.workshopservice.dto.WorkshopResponse;
 import org.unihubworkshop.workshopservice.mapper.RegistrationMapper;
 import org.unihubworkshop.workshopservice.models.Registration;
+import org.unihubworkshop.workshopservice.models.Workshop;
 import org.unihubworkshop.workshopservice.repositories.RegistrationRepository;
 import java.util.List;
 
@@ -24,10 +27,24 @@ public class TicketService {
     }
 
     @Transactional(readOnly = true)
-    public List<RegistrationResponse> getAllTickets(int page, int size) {
+    public PageResponse<RegistrationResponse> getAllTickets(int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
-        return registrationRepository.findAll(pageable).stream()
+
+        Page<Registration> registrationPage = registrationRepository.findAll(pageable);
+
+        List<RegistrationResponse> content = registrationPage.getContent()
+                .stream()
                 .map(registrationMapper::toResponse)
                 .toList();
+
+        return PageResponse.<RegistrationResponse>builder()
+                .content(content)
+                .page(registrationPage.getNumber() + 1)
+                .size(registrationPage.getSize())
+                .totalElements(registrationPage.getTotalElements())
+                .totalPages(registrationPage.getTotalPages())
+                .hasNext(registrationPage.hasNext())
+                .hasPrevious(registrationPage.hasPrevious())
+                .build();
     }
 }

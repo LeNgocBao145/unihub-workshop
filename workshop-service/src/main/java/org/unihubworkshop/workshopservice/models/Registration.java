@@ -23,15 +23,15 @@ public class Registration {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column(name = "workshop_id", nullable = false)
-    private UUID workshopId;
 
-    @Column(name = "user_id", nullable = false)
-    private UUID userId;
+
+    @ManyToOne
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private RegistrationStatus status = RegistrationStatus.RESERVED;
+    private RegistrationStatus status;
 
     @Column(name = "is_present")
     private Boolean isPresent = false;
@@ -46,4 +46,8 @@ public class Registration {
     @UpdateTimestamp
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
+
+    @ManyToOne
+    @JoinColumn(name = "workshop_id")
+    private Workshop workshop;
 }

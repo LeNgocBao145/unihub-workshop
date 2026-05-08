@@ -6,7 +6,10 @@ import org.unihubworkshop.workshopservice.dto.UpdateWorkshopRequest;
 import org.unihubworkshop.workshopservice.dto.WorkshopResponse;
 import org.unihubworkshop.workshopservice.dto.WorkshopSimpleResponse;
 import org.unihubworkshop.workshopservice.dto.WorkshopPaymentResponse;
+import org.unihubworkshop.workshopservice.models.RegistrationStatus;
 import org.unihubworkshop.workshopservice.models.Workshop;
+
+import java.util.UUID;
 
 @Component
 public class WorkshopMapper {
@@ -60,6 +63,32 @@ public class WorkshopMapper {
         }
     }
 
+    public WorkshopResponse toDetailWorkshopResponse(
+            Workshop workshop,
+            RegistrationStatus registrationStatus
+    ) {
+
+        WorkshopResponse response = new WorkshopResponse();
+        response.setId(workshop.getId());
+        response.setName(workshop.getName());
+        response.setHostId(workshop.getHostId());
+        response.setRoom(workshop.getRoom());
+        response.setRoomMap(workshop.getRoomMap());
+        response.setTotalSlots(workshop.getTotalSlots());
+        response.setAvailableSlots(workshop.getAvailableSlots());
+        response.setDescription(workshop.getDescription());
+        response.setPrice(workshop.getPrice());
+        response.setType(workshop.getType());
+        response.setStartAt(workshop.getStartAt());
+        response.setEndAt(workshop.getEndAt());
+        response.setCreatedAt(workshop.getCreatedAt());
+        response.setUpdatedAt(workshop.getUpdatedAt());
+        response.setSpeaker(workshop.getSpeaker());
+        response.setRegistrationStatus(registrationStatus);
+        return response;
+
+    }
+
     public WorkshopResponse toResponse(Workshop workshop) {
         WorkshopResponse response = new WorkshopResponse();
         response.setId(workshop.getId());
@@ -76,8 +105,11 @@ public class WorkshopMapper {
         response.setEndAt(workshop.getEndAt());
         response.setCreatedAt(workshop.getCreatedAt());
         response.setUpdatedAt(workshop.getUpdatedAt());
+        response.setSpeaker(workshop.getSpeaker());
         return response;
     }
+
+
 
     public WorkshopSimpleResponse toSimpleResponse(Workshop workshop) {
         WorkshopSimpleResponse response = new WorkshopSimpleResponse();

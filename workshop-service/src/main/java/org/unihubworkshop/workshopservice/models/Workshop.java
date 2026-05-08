@@ -48,6 +48,9 @@ public class Workshop {
     @Column(nullable = false)
     private Integer availableSlots;
 
+    @Column(nullable = false)
+    private String speaker;
+
     @Size(max = 1000, message = "Description must be less than 1000 characters")
     @Column(columnDefinition = "TEXT")
     private String description;

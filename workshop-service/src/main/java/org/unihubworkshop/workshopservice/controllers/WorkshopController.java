@@ -5,6 +5,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.unihubworkshop.workshopservice.common.ApiResponse;
+import org.unihubworkshop.workshopservice.common.PageResponse;
 import org.unihubworkshop.workshopservice.dto.CreateWorkshopRequest;
 import org.unihubworkshop.workshopservice.dto.StatisticsResponse;
 import org.unihubworkshop.workshopservice.dto.UpdateWorkshopRequest;
@@ -35,8 +36,8 @@ public class WorkshopController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<WorkshopResponse>> getWorkshopById(@PathVariable UUID id) {
-        WorkshopResponse data = workshopService.getWorkshopById(id);
+    public ResponseEntity<ApiResponse<WorkshopResponse>> getWorkshopById(@RequestHeader("X-User-Id") UUID userId, @PathVariable UUID id) {
+        WorkshopResponse data = workshopService.getWorkshopById(userId, id);
         ApiResponse<WorkshopResponse> response =
                 new ApiResponse<>(true, "Get workshop successfully", data);
         /*
@@ -54,16 +55,16 @@ public class WorkshopController {
     }
 
     @GetMapping
-    public ResponseEntity<ApiResponse<List<WorkshopResponse>>> getAllWorkshops(
+    public ResponseEntity<ApiResponse<PageResponse<WorkshopResponse>>> getAllWorkshops(
         @RequestParam(required = false) String name,
         @RequestParam(required = false) LocalDateTime startDate,
         @RequestParam(required = false) LocalDateTime endDate,
         @RequestParam(defaultValue = "1") int page,
         @RequestParam(defaultValue = "10") int size
     ) {
-        List<WorkshopResponse> data = workshopService.getAllWorkshops(name, startDate, endDate, page - 1, size);
+        PageResponse<WorkshopResponse> data = workshopService.getAllWorkshops(name, startDate, endDate, page - 1, size);
 
-        ApiResponse<List<WorkshopResponse>> response =
+        ApiResponse<PageResponse<WorkshopResponse>> response =
                 new ApiResponse<>(true, "Get all workshops successfully", data);
 
         return ResponseEntity.ok(response);

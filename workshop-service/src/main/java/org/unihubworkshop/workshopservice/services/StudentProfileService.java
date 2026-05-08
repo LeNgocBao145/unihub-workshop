@@ -9,6 +9,9 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
+import org.unihubworkshop.workshopservice.common.PageResponse;
+import org.unihubworkshop.workshopservice.dto.RegistrationResponse;
+import org.unihubworkshop.workshopservice.models.Registration;
 import org.unihubworkshop.workshopservice.models.StudentProfile;
 import org.unihubworkshop.workshopservice.models.Workshop;
 import org.unihubworkshop.workshopservice.repositories.StudentProfileRepository;
@@ -32,10 +35,24 @@ public class StudentProfileService {
     }
 
  @Transactional(readOnly = true)
-    public List<StudentProfileResponse> getAllStudents(int page, int size) {
+    public PageResponse<StudentProfileResponse> getAllStudents(int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
-        return studentProfileRepository.findAll(pageable).stream()
-                .map(studentProfileMapper::toResponse)
-                .toList();
+     Page<StudentProfile> studentProfilePage = studentProfileRepository.findAll(pageable);
+
+     List<StudentProfileResponse> content = studentProfilePage.getContent()
+             .stream()
+             .map(studentProfileMapper::toResponse)
+             .toList();
+
+     return PageResponse.<StudentProfileResponse>builder()
+             .content(content)
+             .page(studentProfilePage.getNumber() + 1)
+             .size(studentProfilePage.getSize())
+             .totalElements(studentProfilePage.getTotalElements())
+             .totalPages(studentProfilePage.getTotalPages())
+             .hasNext(studentProfilePage.hasNext())
+             .hasPrevious(studentProfilePage.hasPrevious())
+             .build();
+
     }
 }
