@@ -5,6 +5,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.unihubworkshop.workshopservice.common.ApiResponse;
+import org.unihubworkshop.workshopservice.dto.BookTicketRequest;
 import org.unihubworkshop.workshopservice.dto.CreateWorkshopRequest;
 import org.unihubworkshop.workshopservice.dto.StatisticsResponse;
 import org.unihubworkshop.workshopservice.dto.TicketResponse;
@@ -40,8 +41,9 @@ public class WorkshopController {
 
     @PostMapping("/{id}/tickets")
     public ResponseEntity<ApiResponse<TicketResponse>> bookTicket(
-            @PathVariable UUID id) {
-        TicketResponse data = ticketService.bookTicket(id);
+            @PathVariable UUID id,
+            @Valid @RequestBody BookTicketRequest request) {
+        TicketResponse data = ticketService.bookTicket(id, request);
         ApiResponse<TicketResponse> response =
                 new ApiResponse<>(true, "Ticket booked successfully", data);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);

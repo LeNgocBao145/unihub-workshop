@@ -20,11 +20,14 @@ import java.util.UUID;
 @Entity
 public class StudentProfile {
     @Id
-    @Column(name = "user_id", updatable = false, nullable = false)
-    private UUID userId;
+    @Column(name = "id", updatable = false, nullable = false)
+    private UUID id;
 
     @Column(name = "student_code", nullable = false, unique = true)
     private String studentCode;
+
+    @Column(nullable = false)
+    private String name;
 
     @Column(nullable = false)
     private String department;

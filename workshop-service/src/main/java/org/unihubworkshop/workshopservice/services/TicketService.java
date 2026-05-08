@@ -11,6 +11,7 @@ import org.unihubworkshop.workshopservice.clients.PaymentGrpcClient;
 import org.unihubworkshop.workshopservice.common.UserContext;
 import org.unihubworkshop.workshopservice.config.RabbitMQConfig;
 import org.unihubworkshop.workshopservice.events.RegistrationConfirmedEvent;
+import org.unihubworkshop.workshopservice.dto.BookTicketRequest;
 import org.unihubworkshop.workshopservice.dto.RegistrationResponse;
 import org.unihubworkshop.workshopservice.dto.TicketResponse;
 import org.unihubworkshop.workshopservice.exceptions.InvalidWorkshopException;
@@ -18,6 +19,7 @@ import org.unihubworkshop.workshopservice.exceptions.NotFoundException;
 import org.unihubworkshop.workshopservice.mapper.RegistrationMapper;
 import org.unihubworkshop.workshopservice.models.Registration;
 import org.unihubworkshop.workshopservice.models.RegistrationStatus;
+import org.unihubworkshop.workshopservice.models.StudentProfile;
 import org.unihubworkshop.workshopservice.models.Workshop;
 import org.unihubworkshop.workshopservice.models.WorkshopType;
 import org.unihubworkshop.workshopservice.repositories.RegistrationRepository;
@@ -40,6 +42,7 @@ public class TicketService {
     private final PaymentGrpcClient paymentGrpcClient;
     private final UserContext userContext;
     private final RabbitTemplate rabbitTemplate;
+    private final StudentProfileService studentProfileService;
 
     public TicketService(
             RegistrationRepository registrationRepository,
@@ -48,7 +51,8 @@ public class TicketService {
             CacheAsideService cacheAsideService,
             PaymentGrpcClient paymentGrpcClient,
             UserContext userContext,
-            RabbitTemplate rabbitTemplate) {
+            RabbitTemplate rabbitTemplate,
+            StudentProfileService studentProfileService) {
         this.registrationRepository = registrationRepository;
         this.workshopRepository = workshopRepository;
         this.registrationMapper = registrationMapper;
@@ -56,6 +60,7 @@ public class TicketService {
         this.paymentGrpcClient = paymentGrpcClient;
         this.userContext = userContext;
         this.rabbitTemplate = rabbitTemplate;
+        this.studentProfileService = studentProfileService;
     }
 
     @Transactional(readOnly = true)
@@ -67,17 +72,25 @@ public class TicketService {
     }
 
     /**
-     * Book a ticket for a workshop with cache aside pattern
-     * User ID is extracted from JWT token via UserContext (no need for CreateTicketRequest)
-     * 
-     * 1. Check if workshop exists and has available slots (with cache)
-     * 2. Decrement slot atomically (with pessimistic locking)
-     * 3. Create registration record
-     * 4. Call gRPC to payment service to get QR code
-     * 5. Return ticket response with QR code
+     * Book a ticket for a workshop with student profile verification
+     * 1. Verify student profile information
+     * 2. Check if workshop exists and has available slots (with cache)
+     * 3. Decrement slot atomically (with pessimistic locking)
+     * 4. Create registration record
+     * 5. Call gRPC to payment service to get QR code
+     * 6. Return ticket response with QR code
      */
-    public TicketResponse bookTicket(UUID workshopId) {
+    public TicketResponse bookTicket(UUID workshopId, BookTicketRequest request) {
+        log.info("Booking ticket for workshop: {}, student code: {}", workshopId, request.getStudentCode());
+
+        // Verify student profile
+        studentProfileService.verifyStudentProfile(request);
+
         UUID userId = userContext.getUserId();
+        return performTicketBooking(workshopId, userId);
+    }
+
+    private TicketResponse performTicketBooking(UUID workshopId, UUID userId) {
         log.info("Booking ticket for workshop: {}, user: {}", workshopId, userId);
 
         Workshop workshop = workshopRepository.findById(workshopId)
