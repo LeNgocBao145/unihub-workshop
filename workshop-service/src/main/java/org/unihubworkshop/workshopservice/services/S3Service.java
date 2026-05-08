@@ -16,6 +16,9 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.URL;
+import java.util.Date;
+import com.amazonaws.services.s3.model.GeneratePresignedUrlRequest;
+import com.amazonaws.HttpMethod;
 
 @Service
 public class S3Service {
@@ -44,10 +47,18 @@ public class S3Service {
         PutObjectRequest putReq = new PutObjectRequest(bucket, key, convFile)
                 .withCannedAcl(CannedAccessControlList.Private);
         s3Client.putObject(putReq);
-        URL url = s3Client.getUrl(bucket, key);
+        
+        // Generate pre-signed URL valid for 7 days
+        Date expiration = new Date(System.currentTimeMillis() + (7L * 24 * 60 * 60 * 1000));
+        GeneratePresignedUrlRequest presignedRequest = new GeneratePresignedUrlRequest(bucket, key)
+                .withMethod(HttpMethod.GET)
+                .withExpiration(expiration);
+        
+        URL presignedUrl = s3Client.generatePresignedUrl(presignedRequest);
+        
         // delete temp file
         convFile.delete();
-        return url.toString();
+        return presignedUrl.toString();
     }
 
     private File convertMultipartFileToFile(MultipartFile file) throws IOException {

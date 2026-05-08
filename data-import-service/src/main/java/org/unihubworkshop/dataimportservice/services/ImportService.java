@@ -3,6 +3,8 @@ package org.unihubworkshop.dataimportservice.services;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.unihubworkshop.dataimportservice.models.DataImportRecord;
 import org.unihubworkshop.dataimportservice.models.DataImportStatus;
@@ -24,6 +26,8 @@ import java.util.*;
 @Service
 public class ImportService {
 
+    private static final Logger log = LoggerFactory.getLogger(ImportService.class);
+
     private final StudentProfileRepository repository;
     private final DataImportRepository dataImportRepository;
 
@@ -33,6 +37,7 @@ public class ImportService {
     }
 
     public String processUrl(String fileUrl) {
+        log.info("Starting import process for file: {}", fileUrl);
         String filename = extractFileName(fileUrl);
         DataImportRecord importRecord = new DataImportRecord();
         importRecord.setId(UUID.randomUUID());
@@ -41,11 +46,16 @@ public class ImportService {
 
         try {
             // Step 1: Download file
+            log.debug("Downloading file from URL: {}", fileUrl);
             byte[] fileContent = downloadFile(fileUrl);
+            log.debug("File downloaded successfully, size: {} bytes", fileContent.length);
 
             // Step 2: Pass 1 - Collect all student codes from CSV
+            log.debug("Extracting student codes from CSV");
             Set<String> csvStudentCodes = extractStudentCodesFromCsv(fileContent);
+            log.info("Found {} student codes in CSV", csvStudentCodes.size());
             if (csvStudentCodes.isEmpty()) {
+                log.warn("No valid records found in file: {}", filename);
                 importRecord.setProcessedRows(0);
                 importRecord.setStatus(DataImportStatus.SUCCESS);
                 importRecord.setErrorLog("No valid records found in file");
@@ -54,13 +64,17 @@ public class ImportService {
             }
 
             // Step 3: Single DB query to find existing student codes
+            log.debug("Querying database for existing student codes");
             Set<String> existingCodes = repository.findExistingStudentCodes(csvStudentCodes);
+            log.info("Found {} existing student codes in database", existingCodes.size());
 
             // Step 4: Pass 2 - Parse CSV and build list of profiles
+            log.debug("Parsing CSV and building student profiles");
             CsvParseResult parseResult = parseCsvAndBuildProfiles(fileContent, existingCodes);
 
             // Step 5: Batch save all valid profiles
             if (!parseResult.getProfilesToSave().isEmpty()) {
+                log.info("Saving {} student profiles to database", parseResult.getProfilesToSave().size());
                 repository.saveAll(parseResult.getProfilesToSave());
             }
 
@@ -70,8 +84,11 @@ public class ImportService {
             importRecord.setErrorLog(buildErrorLog(parseResult.getErrors(), parseResult.getDuplicates()));
             dataImportRepository.save(importRecord);
 
-            return buildReport(parseResult.getImportedRows(), parseResult.getErrors(), parseResult.getDuplicates());
+            String report = buildReport(parseResult.getImportedRows(), parseResult.getErrors(), parseResult.getDuplicates());
+            log.info("Import completed for file {}: {}", filename, report);
+            return report;
         } catch (Exception ex) {
+            log.error("Failed to process import file: {}", fileUrl, ex);
             importRecord.setProcessedRows(0);
             importRecord.setStatus(DataImportStatus.FAILED);
             importRecord.setErrorLog(ex.getMessage());
@@ -81,6 +98,7 @@ public class ImportService {
     }
 
     private byte[] downloadFile(String fileUrl) throws Exception {
+        log.debug("Creating HTTP client for file download");
         HttpClient client = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(20))
                 .build();
@@ -91,11 +109,15 @@ public class ImportService {
                 .GET()
                 .build();
 
+        log.debug("Sending HTTP GET request to: {}", fileUrl);
         HttpResponse<byte[]> response = client.send(request, HttpResponse.BodyHandlers.ofByteArray());
+        
         if (response.statusCode() != 200) {
+            log.error("Failed to download file. HTTP Status: {}", response.statusCode());
             throw new RuntimeException("Failed to download file, status=" + response.statusCode());
         }
 
+        log.debug("File downloaded successfully. Response size: {} bytes", response.body().length);
         return response.body();
     }
 
