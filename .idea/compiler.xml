@@ -27,34 +27,18 @@
         <processorPath useClasspath="false">
           <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.46/lombok-1.18.46.jar" />
         </processorPath>
-          <module name="api-gateway" />
-          <module name="workshop-service" />
-          <module name="auth-service" />
-          <module name="payment-service" />
-      </profile>
-      <profile name="Annotation profile for workshop-service" enabled="true">
-        <sourceOutputDir name="target/generated-sources/annotations" />
-        <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
-        <outputRelativeToContentRoot value="true" />
-        <processorPath useClasspath="false">
-          <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.46/lombok-1.18.46.jar" />
-        </processorPath>
+        <module name="workshop-service" />
+        <module name="auth-service" />
         <module name="data-import-service" />
       </profile>
     </annotationProcessing>
-    <bytecodeTargetLevel>
-      <module name="notification-service" target="25" />
-    </bytecodeTargetLevel>
-    <bytecodeTargetLevel>
-      <module name="data-import-service" target="25" />
-    </bytecodeTargetLevel>
   </component>
   <component name="JavacSettings">
     <option name="ADDITIONAL_OPTIONS_OVERRIDE">
       <module name="api-gateway" options="-parameters" />
       <module name="auth-service" options="-parameters" />
-      <module name="notification-service" options="-parameters" />
       <module name="data-import-service" options="-parameters" />
+      <module name="notification-service" options="-parameters" />
       <module name="payment-service" options="-parameters" />
       <module name="workshop-service" options="-parameters" />
     </option>

@@ -26,7 +26,7 @@ public class DataImportRecord {
     @Column(name = "id", updatable = false, nullable = false)
     private UUID id;
 
-    @Column(name = "filename")
+    @Column(name = "filename", length = 512)
     private String filename;
 
     @Enumerated(EnumType.STRING)

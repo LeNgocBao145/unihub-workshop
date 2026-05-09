@@ -15,6 +15,7 @@ import org.unihubworkshop.dataimportservice.repositories.StudentProfileRepositor
 import java.io.ByteArrayInputStream;
 import java.io.InputStreamReader;
 import java.net.URI;
+import java.net.URL;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -103,22 +104,31 @@ public class ImportService {
                 .connectTimeout(Duration.ofSeconds(20))
                 .build();
 
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(fileUrl))
-                .timeout(Duration.ofSeconds(60))
-                .GET()
-                .build();
+        try {
+            String cleanUrl = cleanUrlString(fileUrl);
+            URL url = new URL(cleanUrl);
+            URI uri = url.toURI();
+            
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(uri)
+                    .timeout(Duration.ofSeconds(60))
+                    .GET()
+                    .build();
 
-        log.debug("Sending HTTP GET request to: {}", fileUrl);
-        HttpResponse<byte[]> response = client.send(request, HttpResponse.BodyHandlers.ofByteArray());
-        
-        if (response.statusCode() != 200) {
-            log.error("Failed to download file. HTTP Status: {}", response.statusCode());
-            throw new RuntimeException("Failed to download file, status=" + response.statusCode());
+            log.debug("Sending HTTP GET request");
+            HttpResponse<byte[]> response = client.send(request, HttpResponse.BodyHandlers.ofByteArray());
+            
+            if (response.statusCode() != 200) {
+                log.error("Failed to download file. HTTP Status: {}", response.statusCode());
+                throw new RuntimeException("Failed to download file, status=" + response.statusCode());
+            }
+
+            log.debug("File downloaded successfully. Response size: {} bytes", response.body().length);
+            return response.body();
+        } catch (Exception ex) {
+            log.error("Error creating HTTP request for URL", ex);
+            throw ex;
         }
-
-        log.debug("File downloaded successfully. Response size: {} bytes", response.body().length);
-        return response.body();
     }
 
     // Pass 1: Extract all student codes from CSV for batch lookup (O(1) complexity)
@@ -237,16 +247,26 @@ public class ImportService {
 
     private String extractFileName(String fileUrl) {
         try {
-            URI uri = URI.create(fileUrl);
-            String path = uri.getPath();
+            String cleanUrl = cleanUrlString(fileUrl);
+            URL url = new URL(cleanUrl);
+            String path = url.getPath();
             if (path == null || path.isBlank()) {
-                return fileUrl;
+                return "import-file";
             }
             int slash = path.lastIndexOf('/');
-            return slash >= 0 ? path.substring(slash + 1) : path;
+            String filename = slash >= 0 ? path.substring(slash + 1) : path;
+            return filename.isBlank() ? "import-file" : filename;
         } catch (Exception ex) {
-            return fileUrl;
+            log.warn("Failed to extract filename from URL, using default", ex);
+            return "import-file";
         }
+    }
+
+    private String cleanUrlString(String url) {
+        if (url == null) {
+            return "";
+        }
+        return url.trim().replaceAll("^\"|\"$", "");
     }
 
     private static class CsvParseResult {
