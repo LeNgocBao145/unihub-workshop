@@ -5,6 +5,7 @@ import org.springframework.amqp.core.BindingBuilder;
 import org.springframework.amqp.core.DirectExchange;
 import org.springframework.amqp.core.Queue;
 import org.springframework.amqp.core.TopicExchange;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
@@ -21,6 +22,8 @@ public class RabbitMQConfig {
     public static final String PAYMENT_STATUS_UPDATED_QUEUE = "payment.status.updated.queue";
     public static final String PAYMENT_STATUS_UPDATED_ROUTING_KEY = "payment.status.updated";
 
+    @Value("${app.rabbitmq.import-queue:data-import-queue}")
+    private String importQueue;
     @Bean
     public TopicExchange registrationExchange() {
         return new TopicExchange(REGISTRATION_EXCHANGE, true, false);
@@ -37,6 +40,10 @@ public class RabbitMQConfig {
     }
 
     @Bean
+    public Queue importQueue() {
+        return new Queue(importQueue, true);
+    }
+
     public Binding paymentStatusUpdatedBinding(
             Queue paymentStatusUpdatedQueue,
             DirectExchange paymentExchange) {
@@ -58,5 +65,3 @@ public class RabbitMQConfig {
         return template;
     }
 }
-
-
