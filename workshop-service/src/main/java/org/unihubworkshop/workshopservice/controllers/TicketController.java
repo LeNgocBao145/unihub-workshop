@@ -30,4 +30,15 @@ public class TicketController {
                 new ApiResponse<>(true, "Get tickets successfully", data);
         return ResponseEntity.ok(response);
     }
+
+    @GetMapping("/me")
+    public ResponseEntity<ApiResponse<List<RegistrationResponse>>> getCurrentUserTickets(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size) {
+
+        List<RegistrationResponse> data = ticketService.getCurrentUserTickets(page - 1, size);
+        ApiResponse<List<RegistrationResponse>> response =
+                new ApiResponse<>(true, "Get current user tickets successfully", data);
+        return ResponseEntity.ok(response);
+    }
 }

@@ -3,6 +3,7 @@ package org.unihubworkshop.apigateway.validators;
 
 import org.springframework.stereotype.Component;
 
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
@@ -17,18 +18,19 @@ public class RouteValidator {
             "/refresh-token"
     );
 
-    private static final Map<String, List<String>> ROLE_REQUIREMENTS = Map.of(
-            "^/admin/.*", List.of("HOST"),
-            "^/staff/.*", List.of("HOST", "STAFF"),
-            "^(POST|PUT|PATCH|DELETE) /workshops.*", List.of("HOST"),
-            "^GET /workshops.*", List.of("ATTENDEE", "HOST", "STAFF"),
-            "^GET /auth/users/me", List.of("ATTENDEE", "HOST", "STAFF"),
-            "^POST /auth/logout", List.of("ATTENDEE", "HOST", "STAFF"),
-            "^GET /students.*", List.of("HOST"),
-            "^POST /students/.*", List.of("HOST"),
-            "^GET /tickets.*", List.of("HOST"),
-            "^POST /workshops/.*/tickets.*", List.of("ATTENDEE", "HOST", "STAFF")
-    );
+    private static final Map<String, List<String>> ROLE_REQUIREMENTS = new LinkedHashMap<>(Map.ofEntries(
+            Map.entry("^/admin/.*$", List.of("HOST")),
+            Map.entry("^/staff/.*$", List.of("HOST", "STAFF")),
+            Map.entry("^(POST|PUT|PATCH|DELETE) /workshops.*$", List.of("HOST")),
+            Map.entry("^GET /workshops.*$", List.of("ATTENDEE", "HOST", "STAFF")),
+            Map.entry("^GET /auth/users/me$", List.of("ATTENDEE", "HOST", "STAFF")),
+            Map.entry("^POST /auth/logout$", List.of("ATTENDEE", "HOST", "STAFF")),
+            Map.entry("^GET /students.*$", List.of("HOST")),
+            Map.entry("^POST /students/.*$", List.of("HOST")),
+            Map.entry("^GET /tickets/me$", List.of("ATTENDEE", "HOST", "STAFF")),
+            Map.entry("^GET /tickets.*$", List.of("HOST")),
+            Map.entry("^POST /workshops/.*/tickets.*$", List.of("ATTENDEE", "HOST", "STAFF"))
+    ));
 
     public boolean isSecured(String path) {
         return OPEN_API_ENDPOINTS.stream()

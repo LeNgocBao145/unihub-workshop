@@ -72,6 +72,16 @@ public class TicketService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
+    public List<RegistrationResponse> getCurrentUserTickets(int page, int size) {
+        log.info("Fetching tickets for current user: {}", userContext.getUserId());
+        UUID userId = userContext.getUserId();
+        Pageable pageable = PageRequest.of(page, size);
+        return registrationRepository.findByUserId(userId, pageable).stream()
+                .map(registrationMapper::toResponse)
+                .toList();
+    }
+
     /**
      * Book a ticket for a workshop with student profile verification
      * 1. Verify student profile information

@@ -27,7 +27,7 @@ public class PaymentResilienceService {
     @Value("${payment.resilience.enabled:true}")
     private boolean enabled;
 
-    @Value("${payment.resilience.timeout-ms:1500}")
+    @Value("${payment.resilience.timeout-ms:10000}")
     private long timeoutMs;
 
     @Value("${payment.resilience.max-retries:3}")
