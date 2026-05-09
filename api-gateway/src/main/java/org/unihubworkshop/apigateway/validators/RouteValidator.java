@@ -23,11 +23,11 @@ public class RouteValidator {
             "^(POST|PUT|PATCH|DELETE) /workshops.*", List.of("HOST"),
             "^GET /workshops.*", List.of("ATTENDEE", "HOST", "STAFF"),
             "^GET /auth/users/me", List.of("ATTENDEE", "HOST", "STAFF"),
-            "^POST /auth/logout", List.of("ATTENDEE", "HOST", "STAFF")
-
-
+            "^POST /auth/logout", List.of("ATTENDEE", "HOST", "STAFF"),
+            "^GET /students.*", List.of("HOST"),
+            "^POST /students/.*", List.of("HOST"),
+            "^GET /tickets.*", List.of("HOST")
     );
-
 
     public boolean isSecured(String path) {
         return OPEN_API_ENDPOINTS.stream()

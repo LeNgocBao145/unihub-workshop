@@ -11,6 +11,7 @@ public class StudentProfileMapper {
         StudentProfileResponse dto = new StudentProfileResponse();
         dto.setId(studentProfile.getId());
         dto.setStudentCode(studentProfile.getStudentCode());
+        dto.setName(studentProfile.getName());
         dto.setDepartment(studentProfile.getDepartment());
         dto.setMajor(studentProfile.getMajor());
         dto.setClassName(studentProfile.getClassName());

@@ -68,9 +68,8 @@ public class AuthenticationGatewayFilterFactory extends AbstractGatewayFilterFac
                 String userId = claims.getSubject();
                 String email = claims.get("email", String.class);
                 String role = claims.get("role", String.class);
-                IO.println(role);
-                if (!routeValidator.isAuthorized(method,path, role)) {
-                    IO.println(role + path + role);
+
+                if (!routeValidator.isAuthorized(method, path, role)) {
                     return onError(exchange, "Bạn không có quyền truy cập hệ thống này", HttpStatus.FORBIDDEN);
                 }
 

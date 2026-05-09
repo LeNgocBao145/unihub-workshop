@@ -2,8 +2,10 @@ package org.unihubworkshop.workshopservice.controllers;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import org.unihubworkshop.workshopservice.common.ApiResponse;
 import org.unihubworkshop.workshopservice.dto.StudentProfileResponse;
+import org.unihubworkshop.workshopservice.services.ImportService;
 import org.unihubworkshop.workshopservice.services.StudentProfileService;
 import java.util.List;
 
@@ -12,9 +14,11 @@ import java.util.List;
 public class StudentProfileController {
 
     private final StudentProfileService studentProfileService;
+    private final ImportService importService;
 
-    public StudentProfileController(StudentProfileService studentProfileService) {
+    public StudentProfileController(StudentProfileService studentProfileService, ImportService importService) {
         this.studentProfileService = studentProfileService;
+        this.importService = importService;
     }
 
     @GetMapping
@@ -28,5 +32,13 @@ public class StudentProfileController {
 
         return ResponseEntity.ok(response);
 
+    }
+
+
+    @PostMapping("/import-csv")
+    public ResponseEntity<ApiResponse<String>> importCsv(@RequestParam("file") MultipartFile file) {
+        String message = importService.uploadAndPublish(file);
+        ApiResponse<String> response = new ApiResponse<>(true, "File queued for import", message);
+        return ResponseEntity.ok(response);
     }
 }
