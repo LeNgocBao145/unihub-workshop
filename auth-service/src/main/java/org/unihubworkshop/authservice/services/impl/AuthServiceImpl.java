@@ -53,8 +53,8 @@ public class AuthServiceImpl implements AuthService {
         // 4. Lấy thông tin User từ Account
         User user = account.getUser();
 
-        // 5. Tạo Access Token (JWT)
-        String accessToken = jwtService.generateToken(user);
+        // 5. Tạo Access Token (JWT) với email
+        String accessToken = jwtService.generateToken(user, account.getEmail());
 
         // 6. Xử lý Refresh Token
         refreshTokenRepository.deleteByUser(user);

@@ -9,8 +9,9 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 public class StudentProfileResponse {
-    private UUID userId;
+    private UUID id;
     private String studentCode;
+    private String name;
     private String department;
     private String major;
     private String className;

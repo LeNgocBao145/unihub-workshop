@@ -25,9 +25,18 @@ public class JwtService {
     }
 
     public String generateToken(User user) {
+        return generateTokenWithEmail(user, null);
+    }
+
+    public String generateToken(User user, String email) {
+        return generateTokenWithEmail(user, email);
+    }
+
+    private String generateTokenWithEmail(User user, String email) {
         return Jwts.builder()
                 .setSubject(user.getId().toString())
                 .claim("userId", user.getId())
+                .claim("email", email)
                 .claim("role", user.getRole())
                 .setIssuedAt(new Date(System.currentTimeMillis()))
                 .setExpiration(new Date(System.currentTimeMillis() + jwtExpiration))

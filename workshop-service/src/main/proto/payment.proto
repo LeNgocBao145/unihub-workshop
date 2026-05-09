@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package org.unihubworkshop.grpc;
+
+option java_multiple_files = true;
+option java_package = "org.unihubworkshop.grpc";
+option java_outer_classname = "PaymentProto";
+
+message PaymentQRCodeRequest {
+  string registration_id = 1;
+  string amount = 2;
+  string user_email = 3;
+}
+
+message PaymentQRCodeResponse {
+  string payment_id = 1;
+  string qr_code_url = 2;
+  string status = 3;
+  int64 expires_at = 4;
+}
+
+service PaymentService {
+  rpc GetQRCode(PaymentQRCodeRequest) returns (PaymentQRCodeResponse);
+}
+
