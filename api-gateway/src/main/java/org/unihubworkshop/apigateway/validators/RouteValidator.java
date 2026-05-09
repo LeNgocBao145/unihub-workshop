@@ -26,7 +26,8 @@ public class RouteValidator {
             "^POST /auth/logout", List.of("ATTENDEE", "HOST", "STAFF"),
             "^GET /students.*", List.of("HOST"),
             "^POST /students/.*", List.of("HOST"),
-            "^GET /tickets.*", List.of("HOST")
+            "^GET /tickets.*", List.of("HOST"),
+            "^POST /workshops/.*/tickets.*", List.of("ATTENDEE", "HOST", "STAFF")
     );
 
     public boolean isSecured(String path) {
