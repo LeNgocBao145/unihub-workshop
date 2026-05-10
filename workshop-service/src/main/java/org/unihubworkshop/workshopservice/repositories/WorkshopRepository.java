@@ -15,10 +15,11 @@ public interface WorkshopRepository extends JpaRepository<Workshop, UUID>, JpaSp
     List<Workshop> findByHostId(UUID hostId);
 
     List<Workshop> findByRoom(String room);
-    
+
 
     List<Workshop> findByNameContainingIgnoreCase(String name);
 
     @Query("SELECT s.name FROM Workshop w JOIN w.speakers s WHERE w.id = :workshopId")
     List<String> findSpeakerNamesByWorkshopId(UUID workshopId);
+
 }

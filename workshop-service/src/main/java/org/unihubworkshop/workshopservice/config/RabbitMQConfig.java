@@ -22,6 +22,11 @@ public class RabbitMQConfig {
     public static final String PAYMENT_STATUS_UPDATED_QUEUE = "payment.status.updated.queue";
     public static final String PAYMENT_STATUS_UPDATED_ROUTING_KEY = "payment.status.updated";
 
+    // --- Config cho AI Summary ---
+    public static final String AI_SUMMARY_EXCHANGE = "ai.summary.exchange";
+    public static final String AI_SUMMARY_QUEUE = "ai.summary.queue";
+    public static final String AI_SUMMARY_ROUTING_KEY = "ai.summary.routing.key";
+
     @Value("${app.rabbitmq.import-queue:data-import-queue}")
     private String importQueue;
     @Bean
@@ -51,6 +56,28 @@ public class RabbitMQConfig {
                 .bind(paymentStatusUpdatedQueue)
                 .to(paymentExchange)
                 .with(PAYMENT_STATUS_UPDATED_ROUTING_KEY);
+    }
+
+
+    // --- BEAN CHO AI SUMMARY (MỚI THÊM VÀO) ---
+    @Bean
+    public DirectExchange aiSummaryExchange() {
+        return new DirectExchange(AI_SUMMARY_EXCHANGE, true, false);
+    }
+
+    @Bean
+    public Queue aiSummaryQueue() {
+        return new Queue(AI_SUMMARY_QUEUE, true);
+    }
+
+    @Bean
+    public Binding aiSummaryBinding(
+            Queue aiSummaryQueue,
+            DirectExchange aiSummaryExchange) {
+        return BindingBuilder
+                .bind(aiSummaryQueue)
+                .to(aiSummaryExchange)
+                .with(AI_SUMMARY_ROUTING_KEY);
     }
 
     @Bean
