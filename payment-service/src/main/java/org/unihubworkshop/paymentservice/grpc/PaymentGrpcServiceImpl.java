@@ -54,7 +54,7 @@ public class PaymentGrpcServiceImpl extends PaymentServiceGrpc.PaymentServiceImp
                     amount
             );
 
-            ChargePaymentResponse chargeResponse = paymentService.chargePayment(chargeRequest);
+            ChargePaymentResponse chargeResponse = paymentService.chargePayment(chargeRequest, userEmail);
 
             PaymentQRCodeResponse response = PaymentQRCodeResponse.newBuilder()
                     .setPaymentId(chargeResponse.paymentId().toString())

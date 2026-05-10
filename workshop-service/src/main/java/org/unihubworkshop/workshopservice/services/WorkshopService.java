@@ -153,9 +153,9 @@ public class WorkshopService {
 
         Workshop workshop = findWorkshopById(id);
         IO.println(request);
-        if (!workshop.getHostId().equals(userId)) {
-            throw new AccessDeniedException("Bạn không có quyền chỉnh sửa Workshop này vì bạn không phải là người tạo ra nó.");
-        }
+//        if (!workshop.getHostId().equals(userId)) {
+//            throw new AccessDeniedException("Bạn không có quyền chỉnh sửa Workshop này vì bạn không phải là người tạo ra nó.");
+//        }
         workshopMapper.updateEntityFromRequest(request, workshop);
         Workshop updatedWorkshop = workshopRepository.save(workshop);
         return workshopMapper.toResponse(updatedWorkshop);

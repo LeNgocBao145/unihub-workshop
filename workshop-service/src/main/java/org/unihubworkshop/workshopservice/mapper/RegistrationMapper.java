@@ -2,7 +2,6 @@ package org.unihubworkshop.workshopservice.mapper;
 
 import org.springframework.stereotype.Component;
 import org.unihubworkshop.workshopservice.dto.RegistrationResponse;
-import org.unihubworkshop.workshopservice.dto.StudentProfileResponse;
 import org.unihubworkshop.workshopservice.models.Registration;
 import org.unihubworkshop.workshopservice.dto.RegistrationResponse;
 import org.unihubworkshop.workshopservice.models.User;

@@ -3,16 +3,15 @@ package org.unihubworkshop.workshopservice.services;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.unihubworkshop.workshopservice.clients.PaymentGrpcClient;
-import org.unihubworkshop.workshopservice.common.PageResponse;
 import org.unihubworkshop.workshopservice.common.UserContext;
 import org.unihubworkshop.workshopservice.config.RabbitMQConfig;
 import org.unihubworkshop.workshopservice.events.RegistrationConfirmedEvent;
+import org.unihubworkshop.workshopservice.dto.BookTicketRequest;
 import org.unihubworkshop.workshopservice.dto.RegistrationResponse;
 import org.unihubworkshop.workshopservice.dto.TicketResponse;
 import org.unihubworkshop.workshopservice.exceptions.InvalidWorkshopException;
@@ -20,6 +19,7 @@ import org.unihubworkshop.workshopservice.exceptions.NotFoundException;
 import org.unihubworkshop.workshopservice.mapper.RegistrationMapper;
 import org.unihubworkshop.workshopservice.models.Registration;
 import org.unihubworkshop.workshopservice.models.RegistrationStatus;
+import org.unihubworkshop.workshopservice.models.StudentProfile;
 import org.unihubworkshop.workshopservice.models.Workshop;
 import org.unihubworkshop.workshopservice.models.WorkshopType;
 import org.unihubworkshop.workshopservice.repositories.RegistrationRepository;
@@ -42,6 +42,7 @@ public class TicketService {
     private final PaymentGrpcClient paymentGrpcClient;
     private final UserContext userContext;
     private final RabbitTemplate rabbitTemplate;
+    private final StudentProfileService studentProfileService;
 
     public TicketService(
             RegistrationRepository registrationRepository,
@@ -50,7 +51,8 @@ public class TicketService {
             CacheAsideService cacheAsideService,
             PaymentGrpcClient paymentGrpcClient,
             UserContext userContext,
-            RabbitTemplate rabbitTemplate) {
+            RabbitTemplate rabbitTemplate,
+            StudentProfileService studentProfileService) {
         this.registrationRepository = registrationRepository;
         this.workshopRepository = workshopRepository;
         this.registrationMapper = registrationMapper;
@@ -58,42 +60,37 @@ public class TicketService {
         this.paymentGrpcClient = paymentGrpcClient;
         this.userContext = userContext;
         this.rabbitTemplate = rabbitTemplate;
+        this.studentProfileService = studentProfileService;
     }
 
     @Transactional(readOnly = true)
-    public PageResponse<RegistrationResponse> getAllTickets(int page, int size) {
+    public List<RegistrationResponse> getAllTickets(int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
-
-        Page<Registration> registrationPage = registrationRepository.findAll(pageable);
-
-        List<RegistrationResponse> content = registrationPage.getContent()
-                .stream()
+        return registrationRepository.findAll(pageable).stream()
                 .map(registrationMapper::toResponse)
                 .toList();
-
-        return PageResponse.<RegistrationResponse>builder()
-                .content(content)
-                .page(registrationPage.getNumber() + 1)
-                .size(registrationPage.getSize())
-                .totalElements(registrationPage.getTotalElements())
-                .totalPages(registrationPage.getTotalPages())
-                .hasNext(registrationPage.hasNext())
-                .hasPrevious(registrationPage.hasPrevious())
-                .build();
     }
 
     /**
-     * Book a ticket for a workshop with cache aside pattern
-     * User ID is extracted from JWT token via UserContext (no need for CreateTicketRequest)
-     *
-     * 1. Check if workshop exists and has available slots (with cache)
-     * 2. Decrement slot atomically (with pessimistic locking)
-     * 3. Create registration record
-     * 4. Call gRPC to payment service to get QR code
-     * 5. Return ticket response with QR code
+     * Book a ticket for a workshop with student profile verification
+     * 1. Verify student profile information
+     * 2. Check if workshop exists and has available slots (with cache)
+     * 3. Decrement slot atomically (with pessimistic locking)
+     * 4. Create registration record
+     * 5. Call gRPC to payment service to get QR code
+     * 6. Return ticket response with QR code
      */
-    public TicketResponse bookTicket(UUID workshopId) {
+    public TicketResponse bookTicket(UUID workshopId, BookTicketRequest request) {
+        log.info("Booking ticket for workshop: {}, student code: {}", workshopId, request.getStudentCode());
+
+        // Verify student profile
+        studentProfileService.verifyStudentProfile(request);
+
         UUID userId = userContext.getUserId();
+        return performTicketBooking(workshopId, userId);
+    }
+
+    private TicketResponse performTicketBooking(UUID workshopId, UUID userId) {
         log.info("Booking ticket for workshop: {}, user: {}", workshopId, userId);
 
         Workshop workshop = workshopRepository.findById(workshopId)
@@ -195,7 +192,7 @@ public class TicketService {
         registrationRepository.save(registration);
 
         // Return slot to workshop
-        cacheAsideService.incrementSlot(registration.getWorkshop().getId());
+        cacheAsideService.incrementSlot(registration.getWorkshopId());
         log.info("Successfully cancelled registration: {}", registrationId);
     }
 }

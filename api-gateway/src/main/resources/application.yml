@@ -40,6 +40,31 @@ spring:
                 - StripPrefix=1
                 - Authentication
 
+            ## Tickets Routes
+            ## REST CLIENT -> http://localhost:4000/api/tickets
+            ## API GATEWAY -> http://workshop-service:4002/tickets
+            - id: ticket-service-route
+              uri: http://localhost:4002
+              predicates:
+                - Path=/api/tickets/**
+              filters:
+                - StripPrefix=1
+                - Authentication
+
+            ## Student Profiles Routes
+            ## REST CLIENT -> http://localhost:4000/api/students
+            ## API GATEWAY -> http://workshop-service:4002/students
+            - id: student-profile-service-route
+              uri: http://localhost:4002
+              predicates:
+                - Path=/api/students/**
+              filters:
+                - StripPrefix=1
+                - Authentication
+
+            ## API Docs - Workshop Service
+            ## REST-CLIENT -> http://localhost:4000/api-docs/workshops
+            ## API-GATEWAY -> http://workshop-service:4002/v3/api-docs
             ## API Docs - Workshop Service
             ## REST-CLIENT -> http://localhost:4000/api-docs/workshops
             ## API-GATEWAY -> http://workshop-service:4002/v3/api-docs
@@ -59,7 +84,6 @@ spring:
                 - Path=/api/auth/**
               filters:
                 - StripPrefix=1
-                - Authentication
 
             ## API Docs - Auth Service
             - id: api-docs-auth-route
@@ -95,6 +119,32 @@ spring:
               filters:
                 - RewritePath=/api-docs/payments,/v3/api-docs
 
+            ## Payment Webhook Route (No Authentication)
+            ## SEPAY -> http://localhost:4000/api/payments/webhook
+            ## API GATEWAY -> http://payment-service:4003/api/payments/webhook
+            - id: payment-webhook-route
+              uri: http://localhost:4003
+              predicates:
+                - Path=/api/payments/webhook/**
+
+            ## Payment Service Routes
+            ## REST CLIENT -> http://localhost:4000/api/payments
+            ## API GATEWAY -> http://payment-service:4003/api/payments
+            - id: payment-service-route
+              uri: http://localhost:4003
+              predicates:
+                - Path=/api/payments/**
+              filters:
+                - Authentication
+
+            ## API Docs - Payment Service
+            - id: api-docs-payment-route
+              uri: http://payment-service:4003
+              predicates:
+                - Path=/api-docs/payments
+              filters:
+                - RewritePath=/api-docs/payments,/v3/api-docs
+
   servlet:
     multipart:
       max-file-size: 10MB
@@ -103,4 +153,4 @@ logging:
   level:
     org.springframework.cloud.gateway: TRACE
 jwt:
-  secret: 404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
+  secret: ${JWT_SECRET}

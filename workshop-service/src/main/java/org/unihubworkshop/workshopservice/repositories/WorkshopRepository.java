@@ -19,4 +19,5 @@ public interface WorkshopRepository extends JpaRepository<Workshop, UUID>, JpaSp
     @Query("SELECT s.name FROM Workshop w JOIN w.speakers s WHERE w.id = :workshopId")
     List<String> findSpeakerNamesByWorkshopId(UUID workshopId);
 
+
 }

@@ -23,7 +23,8 @@ public class RouteValidator {
             "^(POST|PUT|PATCH|DELETE) /workshops.*", List.of("HOST"),
             "^GET /workshops.*", List.of("ATTENDEE", "HOST", "STAFF"),
             "^GET /auth/users/me", List.of("ATTENDEE", "HOST", "STAFF"),
-            "^POST /auth/logout", List.of("ATTENDEE", "HOST", "STAFF")
+            "^POST /auth/logout", List.of("ATTENDEE", "HOST", "STAFF"),
+            "^(POST|PUT|PATCH|GET) /ticket.*", List.of("ATTENDEE", "HOST", "STAFF")
 
 
     );

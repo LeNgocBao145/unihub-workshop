@@ -30,8 +30,8 @@ public class PaymentController {
 
     @PostMapping("/charge")
     public ResponseEntity<ApiResponse<ChargePaymentResponse>> chargePayment(
-            @Valid @RequestBody ChargePaymentRequest request) {
-        ChargePaymentResponse response = paymentService.chargePayment(request);
+            @Valid @RequestBody ChargePaymentRequest request, String userEmail) {
+        ChargePaymentResponse response = paymentService.chargePayment(request, userEmail);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.ok("QR code generated successfully", response));
     }
