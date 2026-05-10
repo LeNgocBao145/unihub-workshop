@@ -35,12 +35,11 @@ public class WorkshopService {
     private final WorkshopRepository workshopRepository;
     private final WorkshopMapper workshopMapper;
     private static final String WORKSHOP_NOT_FOUND = "Workshop with ID %s not found";
-    private final ImageService imageService;
+//    private final ImageService imageService;
     public WorkshopService(WorkshopRepository workshopRepository,
-                           WorkshopMapper workshopMapper, ImageService imageService){
+                           WorkshopMapper workshopMapper ){
         this.workshopMapper = workshopMapper;
         this.workshopRepository = workshopRepository;
-        this.imageService = imageService;
     }
 
     public WorkshopResponse createWorkshop(UUID userId, CreateWorkshopRequest request) throws IOException {
@@ -48,10 +47,10 @@ public class WorkshopService {
         Workshop workshop = workshopMapper.toEntity(request);
 
         workshop.setHostId(userId);
-        String pdfUrl = imageService.uploadWorkshopPdf(request.getPdfFile());
-        workshop.setPdfUrl(pdfUrl);
-        String mapUrl = imageService.uploadMap(request.getRoomMap());
-        workshop.setRoomMap(mapUrl);
+//        String pdfUrl = imageService.uploadWorkshopPdf(request.getPdfFile());
+//        workshop.setPdfUrl(pdfUrl);
+//        String mapUrl = imageService.uploadMap(request.getRoomMap());
+//        workshop.setRoomMap(mapUrl);
         Workshop savedWorkshop = workshopRepository.save(workshop);
         return workshopMapper.toResponse(savedWorkshop);
 
