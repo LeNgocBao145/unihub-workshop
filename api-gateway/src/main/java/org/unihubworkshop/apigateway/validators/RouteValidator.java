@@ -29,7 +29,8 @@ public class RouteValidator {
             Map.entry("^POST /students/.*$", List.of("HOST")),
             Map.entry("^GET /tickets/me$", List.of("ATTENDEE", "HOST", "STAFF")),
             Map.entry("^GET /tickets.*$", List.of("HOST")),
-            Map.entry("^POST /workshops/.*/tickets.*$", List.of("ATTENDEE", "HOST", "STAFF"))
+            Map.entry("^POST /workshops/.*/tickets.*$", List.of("ATTENDEE", "HOST", "STAFF")),
+            Map.entry("^POST /workshops/check-in.*$", List.of("ATTENDEE", "HOST", "STAFF"))
     ));
 
     public boolean isSecured(String path) {

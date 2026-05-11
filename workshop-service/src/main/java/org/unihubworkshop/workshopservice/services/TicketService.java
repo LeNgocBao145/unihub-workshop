@@ -10,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.unihubworkshop.workshopservice.clients.PaymentGrpcClient;
 import org.unihubworkshop.workshopservice.common.UserContext;
 import org.unihubworkshop.workshopservice.config.RabbitMQConfig;
+import org.unihubworkshop.workshopservice.dto.RegistrationRequest;
 import org.unihubworkshop.workshopservice.events.RegistrationConfirmedEvent;
 import org.unihubworkshop.workshopservice.dto.BookTicketRequest;
 import org.unihubworkshop.workshopservice.dto.RegistrationResponse;
@@ -101,6 +102,22 @@ public class TicketService {
         return performTicketBooking(workshopId, userId);
     }
 
+    public RegistrationResponse checkInWorkshop(RegistrationRequest request) {
+
+        String id = request.getRegistrationId();
+        UUID uuid = UUID.fromString(id);
+        Registration registration = registrationRepository
+                .findById(uuid)
+                .orElseThrow(() ->
+                        new NotFoundException("Registration not found"));
+
+        registration.setIsPresent(true);
+
+        Registration updatedRegistration =
+                registrationRepository.save(registration);
+
+        return registrationMapper.toResponse(updatedRegistration);
+    }
     private TicketResponse performTicketBooking(UUID workshopId, UUID userId) {
         log.info("Booking ticket for workshop: {}, user: {}", workshopId, userId);
 

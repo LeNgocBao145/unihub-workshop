@@ -5,13 +5,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.unihubworkshop.workshopservice.common.ApiResponse;
-import org.unihubworkshop.workshopservice.dto.BookTicketRequest;
-import org.unihubworkshop.workshopservice.dto.CreateWorkshopRequest;
-import org.unihubworkshop.workshopservice.dto.StatisticsResponse;
-import org.unihubworkshop.workshopservice.dto.TicketResponse;
-import org.unihubworkshop.workshopservice.dto.UpdateWorkshopRequest;
-import org.unihubworkshop.workshopservice.dto.WorkshopResponse;
-import org.unihubworkshop.workshopservice.dto.WorkshopPaymentResponse;
+import org.unihubworkshop.workshopservice.dto.*;
 import org.unihubworkshop.workshopservice.services.TicketService;
 import org.unihubworkshop.workshopservice.services.WorkshopService;
 
@@ -48,6 +42,15 @@ public class WorkshopController {
             @Valid @RequestBody BookTicketRequest request) {
         TicketResponse data = ticketService.bookTicket(id, request);
         ApiResponse<TicketResponse> response =
+                new ApiResponse<>(true, "Ticket booked successfully", data);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @PostMapping("/check-in")
+    public ResponseEntity<ApiResponse<RegistrationResponse>> checkInWorkshop(   @Valid @RequestBody RegistrationRequest request) {
+        System.out.println("Gia tri luu");;
+        RegistrationResponse data = ticketService.checkInWorkshop(request);
+        ApiResponse<RegistrationResponse> response =
                 new ApiResponse<>(true, "Ticket booked successfully", data);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
