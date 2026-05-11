@@ -40,7 +40,7 @@ public class CreateWorkshopRequest {
     private BigDecimal price = BigDecimal.ZERO;
 
 
-    private MultipartFile pdfFile;
+    private MultipartFile summaryFile;
 
     private MultipartFile roomMap;
 

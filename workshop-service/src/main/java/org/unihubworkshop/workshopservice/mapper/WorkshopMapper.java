@@ -27,14 +27,12 @@ public class WorkshopMapper {
     }
 
     public void updateEntityFromRequest(UpdateWorkshopRequest request, Workshop workshop) {
+
         if (request.getName() != null) {
             workshop.setName(request.getName());
         }
         if (request.getRoom() != null) {
             workshop.setRoom(request.getRoom());
-        }
-        if (request.getRoomMap() != null) {
-            workshop.setRoomMap(request.getRoomMap());
         }
 
         if (request.getDescription() != null) {
@@ -44,6 +42,7 @@ public class WorkshopMapper {
         if (request.getSpeaker() != null) {
             workshop.setSpeaker(request.getSpeaker());
         }
+
     }
 
     public WorkshopResponse toResponse(Workshop workshop) {
