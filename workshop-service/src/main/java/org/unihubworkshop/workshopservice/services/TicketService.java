@@ -3,6 +3,7 @@ package org.unihubworkshop.workshopservice.services;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -14,6 +15,7 @@ import org.unihubworkshop.workshopservice.dto.RegistrationRequest;
 import org.unihubworkshop.workshopservice.events.RegistrationConfirmedEvent;
 import org.unihubworkshop.workshopservice.dto.BookTicketRequest;
 import org.unihubworkshop.workshopservice.dto.RegistrationResponse;
+import org.unihubworkshop.workshopservice.dto.TicketDetailResponse;
 import org.unihubworkshop.workshopservice.dto.TicketResponse;
 import org.unihubworkshop.workshopservice.exceptions.InvalidWorkshopException;
 import org.unihubworkshop.workshopservice.exceptions.NotFoundException;
@@ -63,6 +65,16 @@ public class TicketService {
         this.userContext = userContext;
         this.rabbitTemplate = rabbitTemplate;
         this.studentProfileService = studentProfileService;
+    }
+
+    @Transactional(readOnly = true)
+    public List<TicketDetailResponse> getTickets(int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        Page<Registration> registrations = registrationRepository.findAllWithDetails(pageable);
+
+        return registrations.stream()
+                .map(registrationMapper::toDetailResponse)
+                .toList();
     }
 
     @Transactional(readOnly = true)
