@@ -94,10 +94,11 @@ public class TicketService {
     public TicketResponse bookTicket(UUID workshopId, BookTicketRequest request) {
         log.info("Booking ticket for workshop: {}, student code: {}", workshopId, request.getStudentCode());
 
+        UUID userId = userContext.getUserId();
+
         // Verify student profile
         studentProfileService.verifyStudentProfile(request);
 
-        UUID userId = userContext.getUserId();
         return performTicketBooking(workshopId, userId);
     }
 
@@ -107,12 +108,32 @@ public class TicketService {
         Workshop workshop = workshopRepository.findById(workshopId)
                 .orElseThrow(() -> new NotFoundException("Workshop not found"));
 
-        // Check if user already has registration for this workshop
         var existingRegistration = registrationRepository.findByWorkshopIdAndUserId(workshopId, userId);
+
         if (existingRegistration.isPresent()) {
             return handleExistingRegistration(existingRegistration.get(), workshop);
         }
 
+        // Reserve slot with optimistic check
+        reserveWorkshopSlot(workshopId);
+
+        try {
+            if (workshop.getType() == WorkshopType.FREE) {
+                return createFreeWorkshopRegistration(workshopId, userId, workshop);
+            }
+            return createPaidWorkshopRegistration(workshopId, userId, workshop);
+        } catch (Exception e) {
+            log.error("Error during ticket booking, rolling back slot reservation", e);
+            cacheAsideService.incrementSlot(workshopId);
+            throw new RuntimeException("Failed to complete ticket booking: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Reserve a slot for the workshop
+     * Throws exception if no slots available
+     */
+    private void reserveWorkshopSlot(UUID workshopId) {
         Integer availableSlots = cacheAsideService.getAvailableSlotsWithCache(workshopId);
         if (availableSlots <= 0) {
             log.warn("No available slots for workshop: {}", workshopId);
@@ -124,78 +145,107 @@ public class TicketService {
             log.warn("Failed to reserve slot for workshop: {}", workshopId);
             throw new InvalidWorkshopException("Failed to reserve slot, no slots available");
         }
+    }
 
-        String userEmail = userContext.getUserEmail();
+    /**
+     * Create registration for free workshop
+     * Status is set to CONFIRMED immediately without payment
+     */
+    private TicketResponse createFreeWorkshopRegistration(UUID workshopId, UUID userId, Workshop workshop) {
+        log.info("Creating free workshop registration for user: {}", userId);
+
+        Registration registration = new Registration();
+        registration.setWorkshopId(workshopId);
+        registration.setUserId(userId);
+        registration.setIsPresent(false);
+        registration.setStatus(RegistrationStatus.CONFIRMED);
+        registration.setExpiresAt(null);
+
+        Registration savedRegistration = registrationRepository.saveAndFlush(registration);
+        log.info("Free workshop registration confirmed: {}", savedRegistration.getId());
+
+        publishRegistrationConfirmedEvent(savedRegistration, workshop);
+
+        return TicketResponse.builder()
+                .registrationId(savedRegistration.getId())
+                .workshopId(workshopId)
+                .userId(userId)
+                .status(savedRegistration.getStatus())
+                .createdAt(savedRegistration.getCreatedAt())
+                .build();
+    }
+
+    /**
+     * Create registration for paid workshop
+     * Status is set to RESERVED and waits for payment
+     * Calls payment service to generate QR code
+     */
+    private TicketResponse createPaidWorkshopRegistration(UUID workshopId, UUID userId, Workshop workshop) {
+        log.info("Creating paid workshop registration for user: {}", userId);
+
+        Registration registration = new Registration();
+        registration.setWorkshopId(workshopId);
+        registration.setUserId(userId);
+        registration.setIsPresent(false);
+        registration.setStatus(RegistrationStatus.RESERVED);
+        registration.setExpiresAt(LocalDateTime.now().plusHours(1));
+
+        Registration savedRegistration = registrationRepository.saveAndFlush(registration);
+        log.info("Registration created with ID: {}", savedRegistration.getId());
+
         try {
-            Registration registration = new Registration();
-            registration.setWorkshopId(workshopId);
-            registration.setUserId(userId);
-            registration.setIsPresent(false);
-
-            if (workshop.getType() == WorkshopType.FREE) {
-                registration.setStatus(RegistrationStatus.CONFIRMED);
-                registration.setExpiresAt(null);
-                Registration savedRegistration = registrationRepository.saveAndFlush(registration);
-                log.info("Free workshop registration confirmed: {}", savedRegistration.getId());
-
-                List<String> speakerNames = workshopRepository.findSpeakerNamesByWorkshopId(workshopId);
-
-                rabbitTemplate.convertAndSend(
-                        RabbitMQConfig.REGISTRATION_EXCHANGE,
-                        RabbitMQConfig.REGISTRATION_CONFIRMED_ROUTING_KEY,
-                        new RegistrationConfirmedEvent(
-                                savedRegistration.getId(),
-                                workshopId,
-                                userId,
-                                userEmail,
-                                workshop.getName(),
-                                speakerNames,
-                                workshop.getRoom(),
-                                workshop.getRoomMap()
-                        )
-                );
-
-                return TicketResponse.builder()
-                        .registrationId(savedRegistration.getId())
-                        .workshopId(workshopId)
-                        .userId(userId)
-                        .status(savedRegistration.getStatus())
-                        .createdAt(savedRegistration.getCreatedAt())
-                        .build();
-            }
-
-            registration.setStatus(RegistrationStatus.RESERVED);
-            registration.setExpiresAt(LocalDateTime.now().plusHours(1));
-            Registration savedRegistration = registrationRepository.saveAndFlush(registration);
-            log.info("Registration created with ID: {}", savedRegistration.getId());
-
-            log.info("Calling payment service for QR code generation");
-            PaymentQRCodeResponse qrCodeResponse = paymentGrpcClient.getQRCode(
-                    savedRegistration.getId(),
-                    workshop.getPrice(),
-                    userEmail,
-                    RegistrationStatus.RESERVED
-            );
-
-            log.info("Successfully generated QR code for registration: {}", savedRegistration.getId());
-
+            PaymentQRCodeResponse qrCodeResponse = generatePaymentQRCode(savedRegistration, workshop);
             UUID paymentId = UUID.fromString(qrCodeResponse.getPaymentId());
-            
-            // Cache QR code using registrationId as key and paymentId for mapping
+
+            // Cache QR code with TTL
             cacheQRCode(savedRegistration.getId(), paymentId, qrCodeResponse.getQrCodeUrl(),
                     savedRegistration.getExpiresAt());
 
             return buildTicketResponse(savedRegistration, paymentId, qrCodeResponse.getQrCodeUrl());
-
         } catch (PaymentServiceUnavailableException e) {
             log.warn("Payment service unavailable while booking workshop {}. Rolling back reserved slot.", workshopId);
             cacheAsideService.incrementSlot(workshopId);
             throw e;
-        } catch (Exception e) {
-            log.error("Error during ticket booking, rolling back slot reservation", e);
-            cacheAsideService.incrementSlot(workshopId);
-            throw new RuntimeException("Failed to complete ticket booking: " + e.getMessage(), e);
         }
+    }
+
+    /**
+     * Generate QR code from payment service
+     */
+    private PaymentQRCodeResponse generatePaymentQRCode(Registration registration, Workshop workshop) {
+        log.info("Calling payment service for QR code generation");
+        String userEmail = userContext.getUserEmail();
+        PaymentQRCodeResponse qrCodeResponse = paymentGrpcClient.getQRCode(
+                registration.getId(),
+                workshop.getPrice(),
+                userEmail,
+                RegistrationStatus.RESERVED
+        );
+        log.info("Successfully generated QR code for registration: {}", registration.getId());
+        return qrCodeResponse;
+    }
+
+    /**
+     * Publish registration confirmed event via RabbitMQ
+     */
+    private void publishRegistrationConfirmedEvent(Registration registration, Workshop workshop) {
+        List<String> speakerNames = workshopRepository.findSpeakerNamesByWorkshopId(workshop.getId());
+        String userEmail = userContext.getUserEmail();
+
+        rabbitTemplate.convertAndSend(
+                RabbitMQConfig.REGISTRATION_EXCHANGE,
+                RabbitMQConfig.REGISTRATION_CONFIRMED_ROUTING_KEY,
+                new RegistrationConfirmedEvent(
+                        registration.getId(),
+                        workshop.getId(),
+                        registration.getUserId(),
+                        userEmail,
+                        workshop.getName(),
+                        speakerNames,
+                        workshop.getRoom(),
+                        workshop.getRoomMap()
+                )
+        );
     }
 
     private TicketResponse handleExistingRegistration(Registration registration, Workshop workshop) {
@@ -287,6 +337,57 @@ public class TicketService {
         if (ttlSeconds > 0) {
             cacheAsideService.putQRCodeToCache(registrationId, paymentId, qrCodeUrl, ttlSeconds);
         }
+    }
+
+    /**
+     * Get QR code for existing registration
+     * Used when user already has a registration and needs to retrieve QR code again
+     * No request body needed - just registration ID
+     */
+    @Transactional(readOnly = true)
+    public TicketResponse getRegistrationQRCode(UUID workshopId, UUID registrationId) {
+        log.info("Retrieving QR code for registration: {}, workshop: {}", registrationId, workshopId);
+
+        Registration registration = registrationRepository.findById(registrationId)
+                .orElseThrow(() -> new NotFoundException("Registration not found"));
+
+        Workshop workshop = workshopRepository.findById(workshopId)
+                .orElseThrow(() -> new NotFoundException("Workshop not found"));
+
+        // Verify registration belongs to this workshop
+        if (!registration.getWorkshopId().equals(workshopId)) {
+            log.warn("Registration {} does not belong to workshop {}", registrationId, workshopId);
+            throw new InvalidWorkshopException("Registration does not belong to this workshop");
+        }
+
+        // For free workshops, no QR code needed
+        if (workshop.getType() == WorkshopType.FREE) {
+            log.info("Free workshop - no QR code needed for registration: {}", registrationId);
+            return buildTicketResponse(registration, null, null);
+        }
+
+        // For paid workshops, try to get from cache first
+        var cachedQRCode = cacheAsideService.getQRCodeFromCache(registrationId);
+        if (cachedQRCode.isPresent()) {
+            log.info("Found QR code in cache for registration: {}", registrationId);
+            return buildTicketResponse(registration, null, cachedQRCode.get());
+        }
+
+        // QR code not in cache, call payment service
+        log.info("QR code not found in cache, calling payment service for registration: {}", registrationId);
+        String userEmail = userContext.getUserEmail();
+        PaymentQRCodeResponse qrCodeResponse = paymentGrpcClient.getQRCode(
+                registrationId,
+                workshop.getPrice(),
+                userEmail,
+                registration.getStatus()
+        );
+
+        UUID paymentId = UUID.fromString(qrCodeResponse.getPaymentId());
+        cacheQRCode(registrationId, paymentId, qrCodeResponse.getQrCodeUrl(), registration.getExpiresAt());
+
+        log.info("Successfully retrieved QR code for registration: {}", registrationId);
+        return buildTicketResponse(registration, paymentId, qrCodeResponse.getQrCodeUrl());
     }
 
     /**

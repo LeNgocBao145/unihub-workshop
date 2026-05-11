@@ -52,6 +52,16 @@ public class WorkshopController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
+    @GetMapping("/{id}/tickets/{registrationId}")
+    public ResponseEntity<ApiResponse<TicketResponse>> getTicketQRCode(
+            @PathVariable UUID id,
+            @PathVariable UUID registrationId) {
+        TicketResponse data = ticketService.getRegistrationQRCode(id, registrationId);
+        ApiResponse<TicketResponse> response =
+                new ApiResponse<>(true, "Get ticket QR code successfully", data);
+        return ResponseEntity.ok(response);
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<WorkshopResponse>> getWorkshopById(@PathVariable UUID id) {
         WorkshopResponse data = workshopService.getWorkshopById(id);

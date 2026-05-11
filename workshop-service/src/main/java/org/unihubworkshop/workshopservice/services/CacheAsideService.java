@@ -26,6 +26,7 @@ public class CacheAsideService {
     
     private static final String SLOT_CACHE_KEY_PREFIX = "workshop:slots:";
     private static final String QR_CODE_CACHE_KEY_PREFIX = "qrcode:payment:";
+    private static final long SLOT_CACHE_TTL_SECONDS = 300; // 5 minutes
     
     private final WorkshopRepository workshopRepository;
     private final CacheProvider cacheProvider;
@@ -41,7 +42,7 @@ public class CacheAsideService {
      * Get available slots with cache aside pattern
      * 1. Check cache first
      * 2. If miss, load from DB
-     * 3. Cache the result
+     * 3. Cache the result with TTL to avoid stale data
      */
     public Integer getAvailableSlotsWithCache(UUID workshopId) {
         log.debug("Getting available slots for workshop: {}", workshopId);
@@ -59,8 +60,9 @@ public class CacheAsideService {
         log.debug("Cache miss for workshop: {}, loading from DB", workshopId);
         Workshop workshop = workshopService.findWorkshopById(workshopId);
         
-        // Update cache
-        cacheProvider.put(cacheKey, workshop.getAvailableSlots());
+        // Update cache with TTL to ensure fresh data
+        cacheProvider.put(cacheKey, workshop.getAvailableSlots(), SLOT_CACHE_TTL_SECONDS, 
+                java.util.concurrent.TimeUnit.SECONDS);
         return workshop.getAvailableSlots();
     }
 
