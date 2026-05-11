@@ -107,6 +107,12 @@ public class TicketService {
         Workshop workshop = workshopRepository.findById(workshopId)
                 .orElseThrow(() -> new NotFoundException("Workshop not found"));
 
+        // Check if user already has registration for this workshop
+        var existingRegistration = registrationRepository.findByWorkshopIdAndUserId(workshopId, userId);
+        if (existingRegistration.isPresent()) {
+            return handleExistingRegistration(existingRegistration.get(), workshop);
+        }
+
         Integer availableSlots = cacheAsideService.getAvailableSlotsWithCache(workshopId);
         if (availableSlots <= 0) {
             log.warn("No available slots for workshop: {}", workshopId);
@@ -167,21 +173,19 @@ public class TicketService {
             PaymentQRCodeResponse qrCodeResponse = paymentGrpcClient.getQRCode(
                     savedRegistration.getId(),
                     workshop.getPrice(),
-                    userEmail
+                    userEmail,
+                    RegistrationStatus.RESERVED
             );
 
             log.info("Successfully generated QR code for registration: {}", savedRegistration.getId());
 
-            return TicketResponse.builder()
-                    .registrationId(savedRegistration.getId())
-                    .workshopId(workshopId)
-                    .userId(userId)
-                    .status(savedRegistration.getStatus())
-                    .paymentId(qrCodeResponse.getPaymentId())
-                    .qrCodeUrl(qrCodeResponse.getQrCodeUrl())
-                    .expiresAt(savedRegistration.getExpiresAt())
-                    .createdAt(savedRegistration.getCreatedAt())
-                    .build();
+            UUID paymentId = UUID.fromString(qrCodeResponse.getPaymentId());
+            
+            // Cache QR code using registrationId as key and paymentId for mapping
+            cacheQRCode(savedRegistration.getId(), paymentId, qrCodeResponse.getQrCodeUrl(),
+                    savedRegistration.getExpiresAt());
+
+            return buildTicketResponse(savedRegistration, paymentId, qrCodeResponse.getQrCodeUrl());
 
         } catch (PaymentServiceUnavailableException e) {
             log.warn("Payment service unavailable while booking workshop {}. Rolling back reserved slot.", workshopId);
@@ -191,6 +195,97 @@ public class TicketService {
             log.error("Error during ticket booking, rolling back slot reservation", e);
             cacheAsideService.incrementSlot(workshopId);
             throw new RuntimeException("Failed to complete ticket booking: " + e.getMessage(), e);
+        }
+    }
+
+    private TicketResponse handleExistingRegistration(Registration registration, Workshop workshop) {
+        log.info("Registration already exists: {} with status: {}", registration.getId(), registration.getStatus());
+
+        if (workshop.getType() == WorkshopType.FREE) {
+            log.info("Returning existing free workshop registration: {}", registration.getId());
+            return buildTicketResponse(registration, null, null);
+        }
+
+        String userEmail = userContext.getUserEmail();
+        PaymentQRCodeResponse qrCodeResponse = null;
+        
+        // For PAID workshops
+        if (registration.getStatus() == RegistrationStatus.RESERVED) {
+            // Try to get from cache first using registration ID
+            var cachedQRCode = cacheAsideService.getQRCodeFromCache(registration.getId());
+            if (cachedQRCode.isPresent()) {
+                log.info("Found QR code in cache for registration: {}", registration.getId());
+                return buildTicketResponse(registration, null, cachedQRCode.get());
+            }
+
+            // QR code not in cache, call payment service
+            log.info("QR code not found in cache, calling payment service for registration: {}", 
+                    registration.getId());
+            qrCodeResponse = paymentGrpcClient.getQRCode(
+                    registration.getId(),
+                    workshop.getPrice(),
+                    userEmail,
+                    RegistrationStatus.RESERVED
+            );
+            
+            UUID paymentId = UUID.fromString(qrCodeResponse.getPaymentId());
+            cacheQRCode(registration.getId(), paymentId, qrCodeResponse.getQrCodeUrl(),
+                    registration.getExpiresAt());
+
+            return buildTicketResponse(registration, paymentId, qrCodeResponse.getQrCodeUrl());
+        }
+
+        // For CANCELLED status, call payment service to get new QR code
+        if (registration.getStatus() == RegistrationStatus.CANCELLED) {
+            log.info("Registration is cancelled, calling payment service for new QR code for registration: {}", 
+                    registration.getId());
+            qrCodeResponse = paymentGrpcClient.getQRCode(
+                    registration.getId(),
+                    workshop.getPrice(),
+                    userEmail,
+                    RegistrationStatus.CANCELLED
+            );
+
+            registration.setStatus(RegistrationStatus.RESERVED);
+            registration.setExpiresAt(LocalDateTime.now().plusHours(1));
+            Registration updatedRegistration = registrationRepository.saveAndFlush(registration);
+
+            UUID paymentId = UUID.fromString(qrCodeResponse.getPaymentId());
+            cacheQRCode(updatedRegistration.getId(), paymentId, qrCodeResponse.getQrCodeUrl(),
+                    updatedRegistration.getExpiresAt());
+
+            return buildTicketResponse(updatedRegistration, paymentId, qrCodeResponse.getQrCodeUrl());
+        }
+
+        // For CONFIRMED status
+        log.info("Returning existing confirmed registration: {}", registration.getId());
+        return buildTicketResponse(registration, null, null);
+    }
+
+    /**
+     * Build ticket response with common fields
+     */
+    private TicketResponse buildTicketResponse(Registration registration, UUID paymentId, String qrCodeUrl) {
+        return TicketResponse.builder()
+                .registrationId(registration.getId())
+                .workshopId(registration.getWorkshopId())
+                .userId(registration.getUserId())
+                .status(registration.getStatus())
+                .paymentId(paymentId)
+                .qrCodeUrl(qrCodeUrl)
+                .expiresAt(registration.getExpiresAt())
+                .createdAt(registration.getCreatedAt())
+                .build();
+    }
+
+    private void cacheQRCode(UUID registrationId, UUID paymentId, String qrCodeUrl, LocalDateTime expiresAt) {
+        if (expiresAt == null || registrationId == null || paymentId == null) {
+            return;
+        }
+        long ttlSeconds = java.time.temporal.ChronoUnit.SECONDS
+                .between(LocalDateTime.now(), expiresAt);
+        if (ttlSeconds > 0) {
+            cacheAsideService.putQRCodeToCache(registrationId, paymentId, qrCodeUrl, ttlSeconds);
         }
     }
 

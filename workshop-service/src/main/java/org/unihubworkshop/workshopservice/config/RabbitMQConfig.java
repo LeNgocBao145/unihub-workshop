@@ -17,21 +17,37 @@ import org.springframework.context.annotation.Configuration;
 public class RabbitMQConfig {
     public static final String REGISTRATION_EXCHANGE = "registration.exchange";
     public static final String REGISTRATION_CONFIRMED_ROUTING_KEY = "registration.confirmed";
+    public static final String REGISTRATION_CONFIRMED_QUEUE = "registration.confirmed.queue";
 
     public static final String PAYMENT_EXCHANGE = "payment.exchange";
     public static final String PAYMENT_STATUS_UPDATED_QUEUE = "payment.status.updated.queue";
     public static final String PAYMENT_STATUS_UPDATED_ROUTING_KEY = "payment.status.updated";
 
-    // --- Config cho AI Summary ---
     public static final String AI_SUMMARY_EXCHANGE = "ai.summary.exchange";
     public static final String AI_SUMMARY_QUEUE = "ai.summary.queue";
     public static final String AI_SUMMARY_ROUTING_KEY = "ai.summary.routing.key";
 
     @Value("${app.rabbitmq.import-queue:data-import-queue}")
     private String importQueue;
+
     @Bean
     public TopicExchange registrationExchange() {
         return new TopicExchange(REGISTRATION_EXCHANGE, true, false);
+    }
+
+    @Bean
+    public Queue registrationConfirmedQueue() {
+        return new Queue(REGISTRATION_CONFIRMED_QUEUE, true);
+    }
+
+    @Bean
+    public Binding registrationConfirmedBinding(
+            Queue registrationConfirmedQueue,
+            TopicExchange registrationExchange) {
+        return BindingBuilder
+                .bind(registrationConfirmedQueue)
+                .to(registrationExchange)
+                .with(REGISTRATION_CONFIRMED_ROUTING_KEY);
     }
 
     @Bean
@@ -49,6 +65,7 @@ public class RabbitMQConfig {
         return new Queue(importQueue, true);
     }
 
+    @Bean
     public Binding paymentStatusUpdatedBinding(
             Queue paymentStatusUpdatedQueue,
             DirectExchange paymentExchange) {
@@ -58,8 +75,6 @@ public class RabbitMQConfig {
                 .with(PAYMENT_STATUS_UPDATED_ROUTING_KEY);
     }
 
-
-    // --- BEAN CHO AI SUMMARY (MỚI THÊM VÀO) ---
     @Bean
     public DirectExchange aiSummaryExchange() {
         return new DirectExchange(AI_SUMMARY_EXCHANGE, true, false);

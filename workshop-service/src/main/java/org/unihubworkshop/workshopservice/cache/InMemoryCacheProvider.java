@@ -19,25 +19,41 @@ public class InMemoryCacheProvider implements CacheProvider {
     private static final Logger log = LoggerFactory.getLogger(InMemoryCacheProvider.class);
     
     private final Map<String, Integer> cache = new HashMap<>();
-    
-    @Override
-    public Optional<Integer> get(String key) {
-        log.debug("Getting value from in-memory cache for key: {}", key);
-        return Optional.ofNullable(cache.get(key));
-    }
-    
-    @Override
-    public void put(String key, Integer value) {
-        log.debug("Putting value in in-memory cache for key: {}", key);
-        cache.put(key, value);
-    }
-    
+    private final Map<String, String> stringCache = new HashMap<>();
+
     @Override
     public void put(String key, Integer value, long timeout, TimeUnit unit) {
         // For in-memory implementation, we ignore TTL
         log.debug("Putting value in in-memory cache for key: {} (TTL ignored)", key);
         cache.put(key, value);
     }
+
+    @Override
+    public void put(String key, Integer value) {
+        log.debug("Putting value in in-memory cache for key: {}", key);
+        cache.put(key, value);
+    }
+
+    @Override
+    public Optional<Integer> get(String key) {
+        log.debug("Getting value from in-memory cache for key: {}", key);
+        return Optional.ofNullable(cache.get(key));
+    }
+
+    @Override
+    public Optional<String> getString(String key) {
+        log.debug("Getting string value from in-memory cache for key: {}", key);
+        return Optional.ofNullable(stringCache.get(key));
+    }
+
+    @Override
+    public void putString(String key, String value, long timeout, TimeUnit unit) {
+        // For in-memory implementation, we ignore TTL
+        log.debug("Putting string value in in-memory cache for key: {} (TTL ignored)", key);
+        stringCache.put(key, value);
+    }
+
+    // ...existing code...
     
     @Override
     public void delete(String key) {
@@ -54,6 +70,7 @@ public class InMemoryCacheProvider implements CacheProvider {
     public void clear() {
         log.info("Clearing all in-memory cache");
         cache.clear();
+        stringCache.clear();
     }
 }
 

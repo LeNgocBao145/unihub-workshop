@@ -20,7 +20,7 @@ public class TicketResponse {
     private UUID workshopId;
     private UUID userId;
     private RegistrationStatus status;
-    private String paymentId;
+    private UUID paymentId;
     private String qrCodeUrl;
     private LocalDateTime expiresAt;
     private LocalDateTime createdAt;

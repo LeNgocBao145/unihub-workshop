@@ -169,7 +169,8 @@ public class WorkshopService {
         return workshopMapper.toPaymentResponse(workshop);
     }
 
-    private Workshop findWorkshopById(UUID id) {
+    @Transactional(readOnly = true)
+    public Workshop findWorkshopById(UUID id) {
         return workshopRepository.findById(id)
                  .orElseThrow(() -> new NotFoundException("Workshop not found"));
 
