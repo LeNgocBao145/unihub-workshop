@@ -32,6 +32,22 @@ public interface CacheProvider {
      * @param unit time unit
      */
     void put(String key, Integer value, long timeout, TimeUnit unit);
+
+    /**
+     * Get string value from cache
+     * @param key cache key
+     * @return Optional containing the cached string value or empty if not found
+     */
+    Optional<String> getString(String key);
+
+    /**
+     * Put string value in cache with expiration time
+     * @param key cache key
+     * @param value string value to cache
+     * @param timeout expiration time
+     * @param unit time unit
+     */
+    void putString(String key, String value, long timeout, TimeUnit unit);
     
     /**
      * Remove value from cache

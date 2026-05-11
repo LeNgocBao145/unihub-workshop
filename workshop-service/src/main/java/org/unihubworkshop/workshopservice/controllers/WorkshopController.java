@@ -125,8 +125,9 @@ public class WorkshopController {
     public ResponseEntity<WorkshopResponse> updateWorkshop(
             @RequestHeader("X-User-Id") UUID userId,
             @PathVariable UUID id,
-            @Valid @RequestBody UpdateWorkshopRequest request) {
+            @Valid @ModelAttribute UpdateWorkshopRequest request) throws IOException {
         WorkshopResponse response = workshopService.updateWorkshop(userId, id, request);
+
         return ResponseEntity.ok(response);
     }
 

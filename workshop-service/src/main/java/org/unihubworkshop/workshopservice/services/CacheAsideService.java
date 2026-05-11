@@ -9,6 +9,7 @@ import org.unihubworkshop.workshopservice.models.Workshop;
 import org.unihubworkshop.workshopservice.repositories.WorkshopRepository;
 import org.unihubworkshop.workshopservice.exceptions.NotFoundException;
 
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -24,13 +25,16 @@ public class CacheAsideService {
     private static final Logger log = LoggerFactory.getLogger(CacheAsideService.class);
     
     private static final String SLOT_CACHE_KEY_PREFIX = "workshop:slots:";
+    private static final String QR_CODE_CACHE_KEY_PREFIX = "qrcode:payment:";
     
     private final WorkshopRepository workshopRepository;
     private final CacheProvider cacheProvider;
+    private final WorkshopService workshopService;
 
-    public CacheAsideService(WorkshopRepository workshopRepository, CacheProvider cacheProvider) {
+    public CacheAsideService(WorkshopRepository workshopRepository, CacheProvider cacheProvider, WorkshopService workshopService) {
         this.workshopRepository = workshopRepository;
         this.cacheProvider = cacheProvider;
+        this.workshopService = workshopService;
     }
 
     /**
@@ -53,7 +57,7 @@ public class CacheAsideService {
 
         // Cache miss - load from database
         log.debug("Cache miss for workshop: {}, loading from DB", workshopId);
-        Workshop workshop = findWorkshopById(workshopId);
+        Workshop workshop = workshopService.findWorkshopById(workshopId);
         
         // Update cache
         cacheProvider.put(cacheKey, workshop.getAvailableSlots());
@@ -68,8 +72,7 @@ public class CacheAsideService {
     public boolean decrementSlotWithLock(UUID workshopId) {
         log.info("Attempting to decrement slot for workshop: {}", workshopId);
         
-        Workshop workshop = workshopRepository.findById(workshopId)
-                .orElseThrow(() -> new NotFoundException("Workshop not found"));
+        Workshop workshop = workshopService.findWorkshopById(workshopId);
 
         // Check if slots are available
         if (workshop.getAvailableSlots() <= 0) {
@@ -95,9 +98,9 @@ public class CacheAsideService {
     @Transactional
     public void incrementSlot(UUID workshopId) {
         log.info("Incrementing slot for workshop: {}", workshopId);
-        
-        Workshop workshop = findWorkshopById(workshopId);
-        
+
+        Workshop workshop = workshopService.findWorkshopById(workshopId);
+
         // Prevent overflow
         if (workshop.getAvailableSlots() >= workshop.getTotalSlots()) {
             log.warn("Available slots already at max for workshop: {}", workshopId);
@@ -130,9 +133,63 @@ public class CacheAsideService {
         cacheProvider.clear();
     }
 
-    private Workshop findWorkshopById(UUID workshopId) {
-        return workshopRepository.findById(workshopId)
-                .orElseThrow(() -> new NotFoundException("Workshop not found"));
+    /**
+     * Get QR code from cache by registration ID
+     */
+    public Optional<String> getQRCodeFromCache(UUID registrationId) {
+        log.debug("Getting QR code from cache for registration: {}", registrationId);
+        String cacheKey = QR_CODE_CACHE_KEY_PREFIX + registrationId;
+        return cacheProvider.getString(cacheKey);
+    }
+
+    /**
+     * Put QR code in cache with TTL using registration ID
+     * Also caches payment ID mapping for later deletion
+     */
+    public void putQRCodeToCache(UUID registrationId, UUID paymentId, String qrCodeUrl, long ttlSeconds) {
+        log.debug("Putting QR code in cache for registration: {}, payment: {}, TTL: {} seconds", 
+                registrationId, paymentId, ttlSeconds);
+        
+        // Cache QR code with registration ID as key
+        String registrationCacheKey = QR_CODE_CACHE_KEY_PREFIX + registrationId;
+        cacheProvider.putString(registrationCacheKey, qrCodeUrl, ttlSeconds, java.util.concurrent.TimeUnit.SECONDS);
+        
+        // Cache payment ID mapping for deletion purposes
+        String paymentMappingKey = "payment:registration:" + paymentId;
+        cacheProvider.putString(paymentMappingKey, registrationId.toString(), ttlSeconds, java.util.concurrent.TimeUnit.SECONDS);
+    }
+
+    /**
+     * Delete QR code from cache by registration ID
+     */
+    public void deleteQRCodeFromCache(UUID registrationId) {
+        log.debug("Deleting QR code from cache for registration: {}", registrationId);
+        String cacheKey = QR_CODE_CACHE_KEY_PREFIX + registrationId;
+        cacheProvider.delete(cacheKey);
+    }
+
+    /**
+     * Delete QR code from cache by payment ID
+     * First resolves payment ID to registration ID, then deletes
+     */
+    public void deleteQRCodeByCacheKeyFromPaymentId(UUID paymentId) {
+        log.debug("Deleting QR code from cache by payment ID: {}", paymentId);
+        
+        String paymentMappingKey = "payment:registration:" + paymentId;
+        var registrationIdStr = cacheProvider.getString(paymentMappingKey);
+        
+        if (registrationIdStr.isPresent()) {
+            try {
+                UUID registrationId = UUID.fromString(registrationIdStr.get());
+                deleteQRCodeFromCache(registrationId);
+                log.info("Successfully deleted cached QR code for registration: {} (via payment: {})", 
+                        registrationId, paymentId);
+            } catch (IllegalArgumentException e) {
+                log.warn("Failed to parse registration ID from cache for payment: {}", paymentId, e);
+            }
+        }
+        
+        // Also delete the mapping key itself
+        cacheProvider.delete(paymentMappingKey);
     }
 }
-

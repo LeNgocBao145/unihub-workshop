@@ -9,9 +9,16 @@ import org.unihubworkshop.workshopservice.models.Workshop;
 import org.unihubworkshop.workshopservice.repositories.WorkshopRepository;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.model.S3Exception;
+import software.amazon.awssdk.services.s3.presigner.S3Presigner;
+import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
+import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequest;
 
 import java.io.IOException;
+import java.time.Duration;
 import java.util.UUID;
 
 @Service
@@ -20,7 +27,8 @@ public class ImageService {
     @Autowired
     private S3Client s3Client;
     @Value("${r2.bucket-name}") private String bucketName;
-
+    @Autowired
+    private S3Presigner s3Presigner;
     public ImageService(WorkshopRepository workshopRepository) {
         this.workshopRepository = workshopRepository;
     }
@@ -59,6 +67,7 @@ public class ImageService {
     @Transactional
     public String uploadWorkshopPdf(MultipartFile file) throws IOException {
 
+        if(file == null) return "";
         if (file.isEmpty()) {
             return "";
         }
@@ -82,5 +91,45 @@ public class ImageService {
 
         return uniqueFileName;
     }
+    public void deleteFile(String fileKey) {
+        if (fileKey == null || fileKey.trim().isEmpty()) {
+            return;
+        }
 
+        try {
+            DeleteObjectRequest deleteObjectRequest = DeleteObjectRequest.builder()
+                    .bucket(bucketName)
+                    .key(fileKey)
+                    .build();
+
+            s3Client.deleteObject(deleteObjectRequest);
+        } catch (S3Exception e) {
+            // Ném ra lỗi runtime để hệ thống dễ dàng xử lý (hoặc bạn có thể log lỗi tùy theo dự án)
+            throw new RuntimeException("Lỗi khi xóa file trên R2: " + e.awsErrorDetails().errorMessage(), e);
+        }
+    }
+    public String getImageUrl(String imagePath) {
+        if (imagePath == null || imagePath.trim().isEmpty()) {
+            return "";
+        }
+
+        try {
+            GetObjectRequest getObjectRequest = GetObjectRequest.builder()
+                    .bucket(bucketName)
+                    .key(imagePath)
+                    .build();
+
+            GetObjectPresignRequest getObjectPresignRequest = GetObjectPresignRequest.builder()
+                    .signatureDuration(Duration.ofMinutes(120))
+                    .getObjectRequest(getObjectRequest)
+                    .build();
+
+            PresignedGetObjectRequest presignedGetObjectRequest =
+                    s3Presigner.presignGetObject(getObjectPresignRequest);
+
+            return presignedGetObjectRequest.url().toString();
+        } catch (Exception e) {
+            throw new RuntimeException("Lỗi khi tạo URL cho ảnh: " + e.getMessage(), e);
+        }
+    }
 }

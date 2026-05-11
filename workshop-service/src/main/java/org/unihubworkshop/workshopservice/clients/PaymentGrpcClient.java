@@ -11,6 +11,7 @@ import org.unihubworkshop.grpc.PaymentQRCodeRequest;
 import org.unihubworkshop.grpc.PaymentQRCodeResponse;
 import org.unihubworkshop.grpc.PaymentServiceGrpc;
 import org.unihubworkshop.workshopservice.exceptions.PaymentServiceUnavailableException;
+import org.unihubworkshop.workshopservice.models.RegistrationStatus;
 
 import java.math.BigDecimal;
 import java.util.concurrent.TimeUnit;
@@ -56,10 +57,12 @@ public class PaymentGrpcClient {
     public PaymentQRCodeResponse getQRCode(
             UUID registrationId,
             BigDecimal amount,
-            String userEmail) {
-        
-        log.info("Requesting QR code from payment service for registration: {}", registrationId);
-        
+            String userEmail,
+            RegistrationStatus registrationStatus) {
+
+        log.info("Requesting QR code from payment service for registration: {}, status: {}",
+                registrationId, registrationStatus);
+
         initializeChannel();
 
         try {
@@ -67,15 +70,16 @@ public class PaymentGrpcClient {
                     .setRegistrationId(registrationId.toString())
                     .setAmount(amount.toPlainString())
                     .setUserEmail(userEmail)
+                    .setRegistrationStatus(registrationStatus.toString())
                     .build();
 
-                PaymentQRCodeResponse response = blockingStub
-                    .withDeadlineAfter(timeoutMs, TimeUnit.MILLISECONDS)
-                    .getQRCode(request);
-            
-            log.info("Successfully retrieved QR code for registration: {}. PaymentId: {}", 
+            PaymentQRCodeResponse response = blockingStub
+                .withDeadlineAfter(timeoutMs, TimeUnit.MILLISECONDS)
+                .getQRCode(request);
+
+            log.info("Successfully retrieved QR code for registration: {}. PaymentId: {}",
                     registrationId, response.getPaymentId());
-            
+
             return response;
         } catch (Exception e) {
             log.error("Error calling payment service for registration: {}", registrationId, e);

@@ -38,19 +38,23 @@ public class PaymentGrpcServiceImpl extends PaymentServiceGrpc.PaymentServiceImp
             PaymentQRCodeRequest request,
             StreamObserver<PaymentQRCodeResponse> responseObserver) {
         
-        log.info("Received gRPC request for QR code for registration: {}", request.getRegistrationId());
+        log.info("Received gRPC request for QR code for registration: {}, status: {}", 
+                request.getRegistrationId(), request.getRegistrationStatus());
 
         try {
             UUID registrationId = UUID.fromString(request.getRegistrationId());
             BigDecimal amount = new BigDecimal(request.getAmount());
             String userEmail = request.getUserEmail();
+            String registrationStatus = request.getRegistrationStatus();
 
             ChargePaymentRequest chargeRequest = new ChargePaymentRequest(
                     registrationId,
-                    amount
+                    amount,
+                    userEmail,
+                    registrationStatus
             );
 
-            ChargePaymentResponse chargeResponse = paymentService.chargePayment(chargeRequest, userEmail);
+            ChargePaymentResponse chargeResponse = paymentService.chargePayment(chargeRequest);
 
             PaymentQRCodeResponse response = PaymentQRCodeResponse.newBuilder()
                     .setPaymentId(chargeResponse.paymentId().toString())
