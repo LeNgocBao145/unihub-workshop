@@ -40,8 +40,9 @@ public class PaymentService {
     private final PaymentEmailCache paymentEmailCache;
 
     @Transactional
-    public ChargePaymentResponse chargePayment(ChargePaymentRequest request, String userEmail) {
-        log.info("Processing charge payment for registration: {}", request.registrationId());
+    public ChargePaymentResponse chargePayment(ChargePaymentRequest request) {
+        log.info("Processing charge payment for registration: {}, status: {}", 
+                request.registrationId(), request.registrationStatus());
 
         // Check if there's a valid pending payment (not expired) for this registration
         var validPayment = paymentRepository.findValidPendingPayment(
@@ -52,9 +53,36 @@ public class PaymentService {
         
         if (validPayment.isPresent()) {
             Payment payment = validPayment.get();
-            log.info("Reusing existing QR code for registration: {}", request.registrationId());
+            log.info("Reusing existing valid QR code for registration: {}", request.registrationId());
             return new ChargePaymentResponse(payment.getId(), 
                     generateExistingQRCode(payment));
+        }
+
+        // Check if payment already exists but expired (FAILED or expired PENDING)
+        var existingPayment = paymentRepository.findByRegistrationId(request.registrationId());
+        if (existingPayment.isPresent()) {
+            Payment payment = existingPayment.get();
+            
+            // If status is FAILED, refresh the expired_at and update status to PENDING
+            if (payment.getStatus() == PaymentStatus.FAILED) {
+                log.info("Found FAILED payment, refreshing for registration: {}", request.registrationId());
+                payment.setExpiredAt(LocalDateTime.now().plusMinutes(QR_CODE_EXPIRY_MINUTES));
+                payment.setStatus(PaymentStatus.PENDING);
+                Payment updatedPayment = paymentRepository.save(payment);
+                return new ChargePaymentResponse(updatedPayment.getId(), 
+                        generateExistingQRCode(updatedPayment));
+            }
+            
+            // If expired PENDING payment, refresh it
+            if (payment.getStatus() == PaymentStatus.PENDING && 
+                    payment.getExpiredAt() != null && 
+                    payment.getExpiredAt().isBefore(LocalDateTime.now())) {
+                log.info("Found expired PENDING payment, refreshing for registration: {}", request.registrationId());
+                payment.setExpiredAt(LocalDateTime.now().plusMinutes(QR_CODE_EXPIRY_MINUTES));
+                Payment updatedPayment = paymentRepository.save(payment);
+                return new ChargePaymentResponse(updatedPayment.getId(), 
+                        generateExistingQRCode(updatedPayment));
+            }
         }
 
         // Check if payment already succeeded for this registration
@@ -67,7 +95,7 @@ public class PaymentService {
                     "Payment already successfully completed for registration: " + request.registrationId());
         }
 
-        // Create new payment record (allowing retry for PENDING-expired, FAILED, or REFUNDED)
+        // Create new payment record
         Payment payment = new Payment();
         payment.setRegistrationId(request.registrationId());
         payment.setAmount(request.amount());
@@ -79,7 +107,7 @@ public class PaymentService {
         log.info("Payment created with ID: {}", savedPayment.getId());
 
         if(paymentEmailCache.getEmail(savedPayment.getId()) == null){
-            paymentEmailCache.putEmail(savedPayment.getId(), userEmail);
+            paymentEmailCache.putEmail(savedPayment.getId(), request.userEmail());
         }
 
         // Generate QR code
@@ -154,7 +182,8 @@ public class PaymentService {
     private void publishPaymentStatusUpdatedEvent(Payment payment, String userEmail) {
         PaymentStatusUpdatedEvent event = new PaymentStatusUpdatedEvent(
                 payment.getRegistrationId(),
-                userEmail
+                userEmail,
+                payment.getId()
         );
 
         rabbitTemplate.convertAndSend(

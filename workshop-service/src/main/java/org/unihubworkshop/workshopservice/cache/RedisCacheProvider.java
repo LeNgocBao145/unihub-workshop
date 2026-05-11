@@ -45,6 +45,19 @@ public class RedisCacheProvider implements CacheProvider {
         log.debug("Putting value in Redis for key: {} with TTL", key);
         redisTemplate.opsForValue().set(key, value.toString(), timeout, unit);
     }
+
+    @Override
+    public Optional<String> getString(String key) {
+        log.debug("Getting string value from Redis for key: {}", key);
+        String value = redisTemplate.opsForValue().get(key);
+        return value != null ? Optional.of(value) : Optional.empty();
+    }
+
+    @Override
+    public void putString(String key, String value, long timeout, TimeUnit unit) {
+        log.debug("Putting string value in Redis for key: {} with TTL", key);
+        redisTemplate.opsForValue().set(key, value, timeout, unit);
+    }
     
     @Override
     public void delete(String key) {

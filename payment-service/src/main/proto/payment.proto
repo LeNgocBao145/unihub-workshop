@@ -10,6 +10,7 @@ message PaymentQRCodeRequest {
   string registration_id = 1;
   string amount = 2;
   string user_email = 3;
+  string registration_status = 4;
 }
 
 message PaymentQRCodeResponse {
