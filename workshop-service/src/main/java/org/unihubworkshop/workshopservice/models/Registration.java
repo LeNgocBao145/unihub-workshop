@@ -12,7 +12,10 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "registrations")
+@Table(name = "registrations", indexes = {
+        @Index(name = "idx_workshop_user", columnList = "workshop_id, user_id", unique = true),
+        @Index(name = "idx_status_expires", columnList = "status, expires_at")
+})
 @Getter
 @Setter
 @NoArgsConstructor
@@ -26,8 +29,16 @@ public class Registration {
     @Column(name = "workshop_id", nullable = false)
     private UUID workshopId;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "workshop_id", insertable = false, updatable = false)
+    private Workshop workshop;
+
     @Column(name = "user_id", nullable = false)
     private UUID userId;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", insertable = false, updatable = false)
+    private User user;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

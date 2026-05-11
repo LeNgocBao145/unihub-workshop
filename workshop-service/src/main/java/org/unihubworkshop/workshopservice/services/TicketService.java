@@ -3,6 +3,7 @@ package org.unihubworkshop.workshopservice.services;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -10,9 +11,11 @@ import org.springframework.transaction.annotation.Transactional;
 import org.unihubworkshop.workshopservice.clients.PaymentGrpcClient;
 import org.unihubworkshop.workshopservice.common.UserContext;
 import org.unihubworkshop.workshopservice.config.RabbitMQConfig;
+import org.unihubworkshop.workshopservice.dto.RegistrationRequest;
 import org.unihubworkshop.workshopservice.events.RegistrationConfirmedEvent;
 import org.unihubworkshop.workshopservice.dto.BookTicketRequest;
 import org.unihubworkshop.workshopservice.dto.RegistrationResponse;
+import org.unihubworkshop.workshopservice.dto.TicketDetailResponse;
 import org.unihubworkshop.workshopservice.dto.TicketResponse;
 import org.unihubworkshop.workshopservice.exceptions.InvalidWorkshopException;
 import org.unihubworkshop.workshopservice.exceptions.NotFoundException;
@@ -65,6 +68,16 @@ public class TicketService {
     }
 
     @Transactional(readOnly = true)
+    public List<TicketDetailResponse> getTickets(int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        Page<Registration> registrations = registrationRepository.findAllWithDetails(pageable);
+
+        return registrations.stream()
+                .map(registrationMapper::toDetailResponse)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
     public List<RegistrationResponse> getAllTickets(int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
         return registrationRepository.findAll(pageable).stream()
@@ -102,6 +115,22 @@ public class TicketService {
         return performTicketBooking(workshopId, userId);
     }
 
+    public RegistrationResponse checkInWorkshop(RegistrationRequest request) {
+
+        String id = request.getRegistrationId();
+        UUID uuid = UUID.fromString(id);
+        Registration registration = registrationRepository
+                .findById(uuid)
+                .orElseThrow(() ->
+                        new NotFoundException("Registration not found"));
+
+        registration.setIsPresent(true);
+
+        Registration updatedRegistration =
+                registrationRepository.save(registration);
+
+        return registrationMapper.toResponse(updatedRegistration);
+    }
     private TicketResponse performTicketBooking(UUID workshopId, UUID userId) {
         log.info("Booking ticket for workshop: {}, user: {}", workshopId, userId);
 

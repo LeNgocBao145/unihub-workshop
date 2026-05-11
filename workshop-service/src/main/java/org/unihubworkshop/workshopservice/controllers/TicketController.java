@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.unihubworkshop.workshopservice.common.ApiResponse;
 import org.unihubworkshop.workshopservice.dto.RegistrationResponse;
+import org.unihubworkshop.workshopservice.dto.TicketDetailResponse;
 import org.unihubworkshop.workshopservice.services.TicketService;
 import java.util.List;
 
@@ -21,12 +22,12 @@ public class TicketController {
     }
 
     @GetMapping
-    public ResponseEntity<ApiResponse<List<RegistrationResponse>>> getAllTickets(
+    public ResponseEntity<ApiResponse<List<TicketDetailResponse>>> getAllTickets(
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size) {
 
-        List<RegistrationResponse> data = ticketService.getAllTickets(page - 1, size);
-        ApiResponse<List<RegistrationResponse>> response =
+        List<TicketDetailResponse> data = ticketService.getTickets(page - 1, size);
+        ApiResponse<List<TicketDetailResponse>> response =
                 new ApiResponse<>(true, "Get tickets successfully", data);
         return ResponseEntity.ok(response);
     }
