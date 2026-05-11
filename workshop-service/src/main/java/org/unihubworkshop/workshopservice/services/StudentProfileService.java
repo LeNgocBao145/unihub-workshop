@@ -34,9 +34,8 @@ public class StudentProfileService {
     }
 
  @Transactional(readOnly = true)
-    public List<StudentProfileResponse> getAllStudents(int page, int size) {
-        Pageable pageable = PageRequest.of(page, size);
-        return studentProfileRepository.findAll(pageable).stream()
+    public List<StudentProfileResponse> getAllStudents() {
+        return studentProfileRepository.findAll().stream()
                 .map(studentProfileMapper::toResponse)
                 .toList();
     }

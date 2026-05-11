@@ -24,7 +24,7 @@ public class TicketController {
     @GetMapping
     public ResponseEntity<ApiResponse<List<TicketDetailResponse>>> getAllTickets(
             @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "10") int size) {
+            @RequestParam(defaultValue = "1000") int size) {
 
         List<TicketDetailResponse> data = ticketService.getTickets(page - 1, size);
         ApiResponse<List<TicketDetailResponse>> response =

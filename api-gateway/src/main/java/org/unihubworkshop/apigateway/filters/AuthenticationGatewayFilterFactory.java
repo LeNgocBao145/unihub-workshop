@@ -72,6 +72,7 @@ public class AuthenticationGatewayFilterFactory extends AbstractGatewayFilterFac
                 if (!routeValidator.isAuthorized(method, path, role)) {
                     return onError(exchange, "Bạn không có quyền truy cập hệ thống này", HttpStatus.FORBIDDEN);
                 }
+                System.out.println("Pass nay chua");
 
                 ServerWebExchange mutatedExchange = exchange.mutate()
                         .request(exchange.getRequest().mutate()

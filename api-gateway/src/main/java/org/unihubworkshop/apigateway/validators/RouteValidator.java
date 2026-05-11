@@ -23,7 +23,7 @@ public class RouteValidator {
             Map.entry("^/staff/.*$", List.of("HOST", "STAFF")),
             Map.entry("^POST /workshops/.*/tickets$", List.of("ATTENDEE", "HOST", "STAFF")),
             Map.entry("^GET /workshops/.*/tickets/[^/]+$", List.of("ATTENDEE", "HOST", "STAFF")),
-            Map.entry("^GET /workshops/.*/tickets$", List.of("ATTENDEE", "HOST", "STAFF")),
+//            Map.entry("^GET /workshops/.*/tickets$", List.of("ATTENDEE", "HOST", "STAFF")),
             Map.entry("^(POST|PUT|PATCH|DELETE) /workshops.*$", List.of("HOST")),
             Map.entry("^GET /workshops.*$", List.of("ATTENDEE", "HOST", "STAFF")),
             Map.entry("^GET /auth/users/me$", List.of("ATTENDEE", "HOST", "STAFF")),
