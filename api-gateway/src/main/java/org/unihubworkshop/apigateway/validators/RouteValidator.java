@@ -21,18 +21,22 @@ public class RouteValidator {
     private static final Map<String, List<String>> ROLE_REQUIREMENTS = new LinkedHashMap<>(Map.ofEntries(
             Map.entry("^/admin/.*$", List.of("HOST")),
             Map.entry("^/staff/.*$", List.of("HOST", "STAFF")),
-            Map.entry("^POST /workshops/.*/tickets$", List.of("ATTENDEE", "HOST", "STAFF")),
+            // Ticket-specific patterns (most specific first)
+            Map.entry("^GET /tickets/.+/status/stream$", List.of("ATTENDEE", "HOST", "STAFF")),
+            Map.entry("^GET /tickets/me$", List.of("ATTENDEE", "HOST", "STAFF")),
+            Map.entry("^GET /tickets.*$", List.of("ATTENDEE", "HOST", "STAFF")),
+            // Workshop-specific patterns (most specific first)
+            Map.entry("^POST /workshops/check-in.*$", List.of("ATTENDEE", "HOST", "STAFF")),
             Map.entry("^GET /workshops/.*/tickets/[^/]+$", List.of("ATTENDEE", "HOST", "STAFF")),
+            Map.entry("^POST /workshops/.*/tickets$", List.of("ATTENDEE", "HOST", "STAFF")),
             Map.entry("^GET /workshops/.*/tickets$", List.of("ATTENDEE", "HOST", "STAFF")),
+            // General patterns after specific ones
             Map.entry("^(POST|PUT|PATCH|DELETE) /workshops.*$", List.of("HOST")),
             Map.entry("^GET /workshops.*$", List.of("ATTENDEE", "HOST", "STAFF")),
             Map.entry("^GET /auth/users/me$", List.of("ATTENDEE", "HOST", "STAFF")),
             Map.entry("^POST /auth/logout$", List.of("ATTENDEE", "HOST", "STAFF")),
             Map.entry("^GET /students.*$", List.of("HOST")),
-            Map.entry("^POST /students/.*$", List.of("HOST")),
-            Map.entry("^GET /tickets/me$", List.of("ATTENDEE", "HOST", "STAFF")),
-            Map.entry("^GET /tickets.*$", List.of("HOST")),
-            Map.entry("^POST /workshops/check-in.*$", List.of("ATTENDEE", "HOST", "STAFF"))
+            Map.entry("^POST /students/.*$", List.of("HOST"))
     ));
 
     public boolean isSecured(String path) {
