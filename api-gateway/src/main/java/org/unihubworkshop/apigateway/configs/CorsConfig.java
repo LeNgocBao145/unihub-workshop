@@ -16,7 +16,7 @@ public class CorsConfig {
         // Cho phép gửi cookie, token
         config.setAllowCredentials(true);
 
-        config.addAllowedOrigin("http://localhost:5173");
+        config.addAllowedOriginPattern("*");
 
         // Cho phép mọi header (Authorization, Content-Type...)
         config.addAllowedHeader("*");

@@ -18,6 +18,7 @@ import org.unihubworkshop.workshopservice.exceptions.InvalidWorkshopException;
 import org.unihubworkshop.workshopservice.exceptions.ResourceNotFoundException;
 import org.unihubworkshop.workshopservice.mapper.WorkshopMapper;
 import org.unihubworkshop.workshopservice.models.Workshop;
+import org.unihubworkshop.workshopservice.repositories.RegistrationRepository;
 import org.unihubworkshop.workshopservice.repositories.WorkshopRepository;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Page;
@@ -38,12 +39,14 @@ public class WorkshopService {
     private static final String WORKSHOP_NOT_FOUND = "Workshop with ID %s not found";
     private final ImageService imageService;
     private final AiSummaryProducerService aiSummaryProducerService;
+    private final RegistrationRepository registrationRepository;
     public WorkshopService(WorkshopRepository workshopRepository,
-                           WorkshopMapper workshopMapper, ImageService imageService, AiSummaryProducerService aiSummaryProducerService ){
+                           WorkshopMapper workshopMapper, ImageService imageService, AiSummaryProducerService aiSummaryProducerService, RegistrationRepository registrationRepository){
         this.workshopMapper = workshopMapper;
         this.workshopRepository = workshopRepository;
         this.imageService = imageService;
         this.aiSummaryProducerService = aiSummaryProducerService;
+        this.registrationRepository = registrationRepository;
     }
 
     public WorkshopResponse createWorkshop(UUID userId, CreateWorkshopRequest request) throws IOException {
@@ -152,9 +155,7 @@ public class WorkshopService {
         List<Workshop> allWorkshops = workshopRepository.findAll();
 
         long totalWorkshops = allWorkshops.size();
-        long totalRegistrations = allWorkshops.stream()
-                .mapToLong(w -> (long) w.getTotalSlots() - w.getAvailableSlots())
-                .sum();
+        long totalRegistrations = registrationRepository.count();
 
         List<WorkshopSimpleResponse> simpleWorkshops = allWorkshops.stream()
                 .map(workshopMapper::toSimpleResponse)

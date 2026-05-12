@@ -22,10 +22,8 @@ public class StudentProfileController {
     }
 
     @GetMapping
-    public ResponseEntity<ApiResponse<List<StudentProfileResponse>>> getStudents(
-           @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "10") int size) {
-        List<StudentProfileResponse> data = studentProfileService.getAllStudents(page - 1, size);
+    public ResponseEntity<ApiResponse<List<StudentProfileResponse>>> getStudents() {
+        List<StudentProfileResponse> data = studentProfileService.getAllStudents();
 
         ApiResponse<List<StudentProfileResponse>> response =
                 new ApiResponse<>(true, "Get all student profiles successfully", data);
