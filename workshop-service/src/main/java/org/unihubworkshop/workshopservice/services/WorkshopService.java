@@ -8,18 +8,12 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
-import org.unihubworkshop.workshopservice.dto.CreateWorkshopRequest;
-import org.unihubworkshop.workshopservice.dto.StatisticsResponse;
-import org.unihubworkshop.workshopservice.dto.UpdateWorkshopRequest;
-import org.unihubworkshop.workshopservice.dto.WorkshopResponse;
-import org.unihubworkshop.workshopservice.dto.WorkshopSimpleResponse;
-import org.unihubworkshop.workshopservice.dto.WorkshopPaymentResponse;
+import org.unihubworkshop.workshopservice.dto.*;
 import org.unihubworkshop.workshopservice.exceptions.InvalidWorkshopException;
 import org.unihubworkshop.workshopservice.exceptions.ResourceNotFoundException;
 import org.unihubworkshop.workshopservice.mapper.WorkshopMapper;
 import org.unihubworkshop.workshopservice.models.Workshop;
-import org.unihubworkshop.workshopservice.repositories.RegistrationRepository;
-import org.unihubworkshop.workshopservice.repositories.WorkshopRepository;
+import org.unihubworkshop.workshopservice.repositories.*;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Page;
 import org.unihubworkshop.workshopservice.exceptions.NotFoundException;
@@ -31,6 +25,8 @@ import org.unihubworkshop.workshopservice.services.AiSummaryProducerService;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
+
 @Service
 @Transactional
 public class WorkshopService {
@@ -40,13 +36,26 @@ public class WorkshopService {
     private final ImageService imageService;
     private final AiSummaryProducerService aiSummaryProducerService;
     private final RegistrationRepository registrationRepository;
+    private final DepartmentRepository departmentRepository;
+    private final MajorRepository majorRepository;
+    private final StudentClassRepository studentClassRepository;
+
     public WorkshopService(WorkshopRepository workshopRepository,
-                           WorkshopMapper workshopMapper, ImageService imageService, AiSummaryProducerService aiSummaryProducerService, RegistrationRepository registrationRepository){
+                           WorkshopMapper workshopMapper,
+                           ImageService imageService,
+                           AiSummaryProducerService aiSummaryProducerService,
+                           RegistrationRepository registrationRepository,
+                           DepartmentRepository departmentRepository,
+                           MajorRepository majorRepository,
+                           StudentClassRepository studentClassRepository){
         this.workshopMapper = workshopMapper;
         this.workshopRepository = workshopRepository;
         this.imageService = imageService;
         this.aiSummaryProducerService = aiSummaryProducerService;
         this.registrationRepository = registrationRepository;
+        this.departmentRepository = departmentRepository;
+        this.majorRepository = majorRepository;
+        this.studentClassRepository = studentClassRepository;
     }
 
     public WorkshopResponse createWorkshop(UUID userId, CreateWorkshopRequest request) throws IOException {
@@ -193,5 +202,25 @@ public class WorkshopService {
             }
         }
         return response;
+    }
+    @Transactional(readOnly = true)
+    public ReferenceDataResponse getAllReferenceData() {
+        // Lấy và map Department -> {id, name}
+        List<ReferenceItemDto> departments = departmentRepository.findAll().stream()
+
+                .map(dept -> new ReferenceItemDto(dept.getId(), dept.getDepartmentName()))
+                .collect(Collectors.toList());
+
+        // Lấy và map Major -> {id, name}
+        List<ReferenceItemDto> majors = majorRepository.findAll().stream()
+                .map(major -> new ReferenceItemDto(major.getId(), major.getMajorName()))
+                .collect(Collectors.toList());
+
+        // Lấy và map Class -> {id, name}
+        List<ReferenceItemDto> classes = studentClassRepository.findAll().stream()
+                .map(cls -> new ReferenceItemDto(cls.getId(), cls.getClassName()))
+                .collect(Collectors.toList());
+
+        return new ReferenceDataResponse(departments, majors, classes);
     }
 }

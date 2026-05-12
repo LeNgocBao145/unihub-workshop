@@ -18,22 +18,34 @@ public class RouteValidator {
             "/refresh-token"
     );
 
-    private static final Map<String, List<String>> ROLE_REQUIREMENTS = new LinkedHashMap<>(Map.ofEntries(
-            Map.entry("^/admin/.*$", List.of("HOST")),
-            Map.entry("^/staff/.*$", List.of("HOST", "STAFF")),
-            Map.entry("^POST /workshops/.*/tickets$", List.of("ATTENDEE", "HOST", "STAFF")),
-            Map.entry("^GET /workshops/.*/tickets/[^/]+$", List.of("ATTENDEE", "HOST", "STAFF")),
-//            Map.entry("^GET /workshops/.*/tickets$", List.of("ATTENDEE", "HOST", "STAFF")),
-            Map.entry("^(POST|PUT|PATCH|DELETE) /workshops.*$", List.of("HOST")),
-            Map.entry("^GET /workshops.*$", List.of("ATTENDEE", "HOST", "STAFF")),
-            Map.entry("^GET /auth/users/me$", List.of("ATTENDEE", "HOST", "STAFF")),
-            Map.entry("^POST /auth/logout$", List.of("ATTENDEE", "HOST", "STAFF")),
-            Map.entry("^GET /students.*$", List.of("HOST")),
-            Map.entry("^POST /students/.*$", List.of("HOST")),
-            Map.entry("^GET /tickets/me$", List.of("ATTENDEE", "HOST", "STAFF")),
-            Map.entry("^GET /tickets.*$", List.of("HOST")),
-            Map.entry("^POST /workshops/check-in.*$", List.of("ATTENDEE", "HOST", "STAFF"))
-    ));
+    private static final Map<String, List<String>> ROLE_REQUIREMENTS = new LinkedHashMap<>();
+
+    static {
+
+        ROLE_REQUIREMENTS.put("^.* /admin/.*$", List.of("HOST"));
+        ROLE_REQUIREMENTS.put("^.* /staff/.*$", List.of("HOST", "STAFF"));
+
+
+        // QUY TẮC VÀNG: CÁC ROUTE ĐẶC THÙ / CỤ THỂ PHẢI ĐẶT LÊN TRÊN
+
+        ROLE_REQUIREMENTS.put("^POST /workshops/.*/tickets$", List.of("ATTENDEE", "HOST", "STAFF"));
+        ROLE_REQUIREMENTS.put("^GET /workshops/.*/tickets/[^/]+$", List.of("ATTENDEE", "HOST", "STAFF"));
+
+
+        ROLE_REQUIREMENTS.put("^POST /workshops/check-in.*$", List.of("ATTENDEE", "HOST", "STAFF"));
+
+        // CÁC ROUTE CHUNG CHUNG (GENERIC) PHẢI ĐẶT Ở DƯỚI CÙNG
+
+        ROLE_REQUIREMENTS.put("^(POST|PUT|PATCH|DELETE) /workshops.*$", List.of("HOST"));
+        ROLE_REQUIREMENTS.put("^GET /workshops.*$", List.of("ATTENDEE", "HOST", "STAFF"));
+
+        ROLE_REQUIREMENTS.put("^GET /auth/users/me$", List.of("ATTENDEE", "HOST", "STAFF"));
+        ROLE_REQUIREMENTS.put("^POST /auth/logout$", List.of("ATTENDEE", "HOST", "STAFF"));
+        ROLE_REQUIREMENTS.put("^GET /students.*$", List.of("HOST"));
+        ROLE_REQUIREMENTS.put("^POST /students/.*$", List.of("HOST"));
+        ROLE_REQUIREMENTS.put("^GET /tickets/me$", List.of("ATTENDEE", "HOST", "STAFF"));
+        ROLE_REQUIREMENTS.put("^GET /tickets.*$", List.of("HOST"));
+    }
 
     public boolean isSecured(String path) {
         return OPEN_API_ENDPOINTS.stream()

@@ -148,4 +148,12 @@ public class WorkshopController {
         workshopService.deleteWorkshop(userId, id);
         return ResponseEntity.noContent().build();
     }
+
+    @GetMapping("/reference-data")
+    public ResponseEntity<ApiResponse<ReferenceDataResponse>> getReferenceData() {
+        ReferenceDataResponse data = workshopService.getAllReferenceData();
+        ApiResponse<ReferenceDataResponse> response =
+                new ApiResponse<>(true, "Get reference data successfully", data);
+        return ResponseEntity.ok(response);
+    }
 }

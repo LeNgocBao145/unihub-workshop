@@ -6,11 +6,8 @@ import org.apache.commons.csv.CSVRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
-import org.unihubworkshop.dataimportservice.models.DataImportRecord;
-import org.unihubworkshop.dataimportservice.models.DataImportStatus;
-import org.unihubworkshop.dataimportservice.models.StudentProfile;
-import org.unihubworkshop.dataimportservice.repositories.DataImportRepository;
-import org.unihubworkshop.dataimportservice.repositories.StudentProfileRepository;
+import org.unihubworkshop.dataimportservice.models.*;
+import org.unihubworkshop.dataimportservice.repositories.*;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStreamReader;
@@ -23,6 +20,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.time.Duration;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class ImportService {
@@ -31,10 +29,19 @@ public class ImportService {
 
     private final StudentProfileRepository repository;
     private final DataImportRepository dataImportRepository;
-
-    public ImportService(StudentProfileRepository repository, DataImportRepository dataImportRepository) {
+    private final DepartmentRepository departmentRepository;
+    private final MajorRepository majorRepository;
+    private final StudentClassRepository studentClassRepository;
+    public ImportService(StudentProfileRepository repository,
+                         DataImportRepository dataImportRepository,
+                         DepartmentRepository departmentRepository,
+                         MajorRepository majorRepository,
+                         StudentClassRepository studentClassRepository) {
         this.repository = repository;
         this.dataImportRepository = dataImportRepository;
+        this.departmentRepository = departmentRepository;
+        this.majorRepository = majorRepository;
+        this.studentClassRepository = studentClassRepository;
     }
 
     public String processUrl(String fileUrl) {
@@ -53,9 +60,9 @@ public class ImportService {
 
             // Step 2: Pass 1 - Collect all student codes from CSV
             log.debug("Extracting student codes from CSV");
-            Set<String> csvStudentCodes = extractStudentCodesFromCsv(fileContent);
-            log.info("Found {} student codes in CSV", csvStudentCodes.size());
-            if (csvStudentCodes.isEmpty()) {
+            CsvPreprocessData csvData = preprocessCsvData(fileContent);
+            log.info("Found {} student codes in CSV", csvData.getStudentCodes().size());
+            if (csvData.getStudentCodes().isEmpty()) {
                 log.warn("No valid records found in file: {}", filename);
                 importRecord.setProcessedRows(0);
                 importRecord.setStatus(DataImportStatus.SUCCESS);
@@ -66,8 +73,12 @@ public class ImportService {
 
             // Step 3: Single DB query to find existing student codes
             log.debug("Querying database for existing student codes");
-            Set<String> existingCodes = repository.findExistingStudentCodes(csvStudentCodes);
+            Set<String> existingCodes = repository.findExistingStudentCodes(csvData.getStudentCodes());
             log.info("Found {} existing student codes in database", existingCodes.size());
+
+            // [THÊM MỚI] Step 3.5: Kiểm tra và lưu mới các Department, Major, Class chưa tồn tại
+            log.debug("Checking and saving missing reference entities (Departments, Majors, Classes)");
+            saveMissingReferenceData(csvData);
 
             // Step 4: Pass 2 - Parse CSV and build list of profiles
             log.debug("Parsing CSV and building student profiles");
@@ -131,9 +142,11 @@ public class ImportService {
         }
     }
 
-    // Pass 1: Extract all student codes from CSV for batch lookup (O(1) complexity)
-    private Set<String> extractStudentCodesFromCsv(byte[] fileContent) throws Exception {
+    private CsvPreprocessData preprocessCsvData(byte[] fileContent) throws Exception {
         Set<String> studentCodes = new HashSet<>();
+        Set<String> departments = new HashSet<>();
+        Set<String> majors = new HashSet<>();
+        Set<String> classes = new HashSet<>();
 
         try (CSVParser parser = CSVParser.parse(
                 new InputStreamReader(new ByteArrayInputStream(fileContent), StandardCharsets.UTF_8),
@@ -143,12 +156,73 @@ public class ImportService {
                 if (studentCode != null && !studentCode.isBlank()) {
                     studentCodes.add(studentCode);
                 }
+
+                // [THÊM MỚI] Thu thập Department, Major, Class
+                String department = getField(record, 2, "department", "Khoa", "khoa");
+                if (department != null && !department.isBlank()) departments.add(department);
+
+                String major = getField(record, 3, "major", "Chuyên ngành", "chuyên ngành");
+                if (major != null && !major.isBlank()) majors.add(major);
+
+                String className = getField(record, 4, "class_name", "Lớp", "lop");
+                if (className != null && !className.isBlank()) classes.add(className);
             }
         }
 
-        return studentCodes;
+        return new CsvPreprocessData(studentCodes, departments, majors, classes);
     }
+    private void saveMissingReferenceData(CsvPreprocessData csvData) {
+        // 1. Xử lý Department
+        if (!csvData.getDepartments().isEmpty()) {
+            Set<String> existingDepts = departmentRepository.findExistingNames(csvData.getDepartments());
+            List<Department> newDepts = csvData.getDepartments().stream()
+                    .filter(name -> !existingDepts.contains(name))
+                    .map(name -> {
+                        Department d = new Department();
+                        d.setId(UUID.randomUUID());
+                        d.setDepartmentName(name); // Thay bằng tên property của bạn (VD: setName)
+                        return d;
+                    }).collect(Collectors.toList());
+            if (!newDepts.isEmpty()) {
+                departmentRepository.saveAll(newDepts);
+                log.info("Saved {} new departments to database", newDepts.size());
+            }
+        }
 
+        // 2. Xử lý Major
+        if (!csvData.getMajors().isEmpty()) {
+            Set<String> existingMajors = majorRepository.findExistingNames(csvData.getMajors());
+            List<Major> newMajors = csvData.getMajors().stream()
+                    .filter(name -> !existingMajors.contains(name))
+                    .map(name -> {
+                        Major m = new Major();
+                        m.setId(UUID.randomUUID());
+                        m.setMajorName(name); // Thay bằng tên property của bạn
+                        return m;
+                    }).collect(Collectors.toList());
+            if (!newMajors.isEmpty()) {
+                majorRepository.saveAll(newMajors);
+                log.info("Saved {} new majors to database", newMajors.size());
+            }
+        }
+
+        // 3. Xử lý Class
+        if (!csvData.getClasses().isEmpty()) {
+            Set<String> existingClasses = studentClassRepository.findExistingNames(csvData.getClasses());
+            List<StudentClass> newClasses = csvData.getClasses().stream()
+                    .filter(name -> !existingClasses.contains(name))
+                    .map(name -> {
+                        StudentClass c = new StudentClass();
+                        c.setId(UUID.randomUUID());
+                        c.setClassName(name); // Thay bằng tên property của bạn
+                        return c;
+                    }).collect(Collectors.toList());
+            if (!newClasses.isEmpty()) {
+                studentClassRepository.saveAll(newClasses);
+                log.info("Saved {} new classes to database", newClasses.size());
+            }
+        }
+    }
     // Pass 2: Parse CSV and build list of StudentProfile objects for batch save
     private CsvParseResult parseCsvAndBuildProfiles(byte[] fileContent, Set<String> existingCodes) throws Exception {
         List<StudentProfile> profilesToSave = new ArrayList<>();
@@ -298,5 +372,24 @@ public class ImportService {
             return duplicates;
         }
     }
+    private static class CsvPreprocessData {
+        private final Set<String> studentCodes;
+        private final Set<String> departments;
+        private final Set<String> majors;
+        private final Set<String> classes;
+
+        public CsvPreprocessData(Set<String> studentCodes, Set<String> departments, Set<String> majors, Set<String> classes) {
+            this.studentCodes = studentCodes;
+            this.departments = departments;
+            this.majors = majors;
+            this.classes = classes;
+        }
+
+        public Set<String> getStudentCodes() { return studentCodes; }
+        public Set<String> getDepartments() { return departments; }
+        public Set<String> getMajors() { return majors; }
+        public Set<String> getClasses() { return classes; }
+    }
+
 }
 
