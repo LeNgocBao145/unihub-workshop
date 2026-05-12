@@ -48,7 +48,6 @@ public class WorkshopController {
 
     @PostMapping("/check-in")
     public ResponseEntity<ApiResponse<RegistrationResponse>> checkInWorkshop(   @Valid @RequestBody RegistrationRequest request) {
-        System.out.println("Gia tri luu");;
         RegistrationResponse data = ticketService.checkInWorkshop(request);
         ApiResponse<RegistrationResponse> response =
                 new ApiResponse<>(true, "Ticket booked successfully", data);
