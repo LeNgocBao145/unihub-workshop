@@ -73,7 +73,7 @@ public class CacheAsideService {
     @Transactional
     public boolean decrementSlotWithLock(UUID workshopId) {
         log.info("Attempting to decrement slot for workshop: {}", workshopId);
-        
+
         Workshop workshop = workshopService.findWorkshopById(workshopId);
 
         // Check if slots are available
@@ -85,11 +85,11 @@ public class CacheAsideService {
         // Decrement slot atomically
         workshop.setAvailableSlots(workshop.getAvailableSlots() - 1);
         Workshop updated = workshopRepository.save(workshop);
-        
+
         // Invalidate cache to ensure consistency
         invalidateCache(workshopId);
-        
-        log.info("Successfully decremented slot for workshop: {}. Remaining slots: {}", 
+
+        log.info("Successfully decremented slot for workshop: {}. Remaining slots: {}",
                 workshopId, updated.getAvailableSlots());
         return true;
     }
@@ -193,5 +193,20 @@ public class CacheAsideService {
         
         // Also delete the mapping key itself
         cacheProvider.delete(paymentMappingKey);
+    }
+    public void syncCacheFromDB(UUID workshopId) {
+        // 1. Lấy thông tin mới nhất từ Database
+        Workshop workshop = workshopRepository.findById(workshopId)
+                .orElseThrow(() -> new NotFoundException("Workshop not found"));
+
+        // 2. Sử dụng Prefix chuẩn của class
+        String cacheKey = SLOT_CACHE_KEY_PREFIX + workshopId;
+        Integer realAvailableSlots = workshop.getAvailableSlots();
+
+        // 3. Set lại giá trị vào Cache thông qua CacheProvider
+        cacheProvider.put(cacheKey, realAvailableSlots, SLOT_CACHE_TTL_SECONDS,
+                java.util.concurrent.TimeUnit.SECONDS);
+
+        log.info("Synced cache from DB for workshop {}. Real slots: {}", workshopId, realAvailableSlots);
     }
 }

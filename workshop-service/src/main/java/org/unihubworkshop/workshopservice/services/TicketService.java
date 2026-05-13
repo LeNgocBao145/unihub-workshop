@@ -128,14 +128,24 @@ public class TicketService {
         return registrationMapper.toResponse(updatedRegistration);
     }
     private TicketResponse performTicketBooking(UUID workshopId, UUID userId) {
-        log.info("Booking ticket for workshop: {}, user: {}", workshopId, userId);
+        // 1. Dùng Cache để check nhanh (không cần Lock phức tạp, chỉ cần ngăn request ảo khi đã hết vé)
+        Integer availableSlots = cacheAsideService.getAvailableSlotsWithCache(workshopId);
+        if (availableSlots <= 0) {
+            throw new InvalidWorkshopException("No available slots for this workshop");
+        }
 
+        // 2. Chốt chặn cuối: Để DB trừ vé an toàn (Atomic Update)
+        int updatedRows = workshopRepository.decrementAvailableSlot(workshopId);
+        if (updatedRows == 0) {
+            // Đã hết vé ở DB, cập nhật lại Cache cho đồng bộ
+            cacheAsideService.syncCacheFromDB(workshopId);
+            throw new InvalidWorkshopException("Failed to reserve slot, workshop is full");
+        }
+
+        // 3. Tiến hành tạo Registration (Đã chắc chắn có vé)
         Workshop workshop = workshopRepository.findById(workshopId)
                 .orElseThrow(() -> new NotFoundException("Workshop not found"));
 
-
-        // Reserve slot with optimistic check
-        reserveWorkshopSlot(workshopId);
 
         try {
             if (workshop.getType() == WorkshopType.FREE) {

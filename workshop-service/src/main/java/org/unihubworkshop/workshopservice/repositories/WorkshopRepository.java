@@ -2,7 +2,9 @@ package org.unihubworkshop.workshopservice.repositories;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import org.unihubworkshop.workshopservice.models.Workshop;
 
@@ -21,5 +23,7 @@ public interface WorkshopRepository extends JpaRepository<Workshop, UUID>, JpaSp
 
     @Query("SELECT s.name FROM Workshop w JOIN w.speakers s WHERE w.id = :workshopId")
     List<String> findSpeakerNamesByWorkshopId(UUID workshopId);
-
+    @Modifying
+    @Query("UPDATE Workshop w SET w.availableSlots = w.availableSlots - 1 WHERE w.id = :id AND w.availableSlots > 0")
+    int decrementAvailableSlot(@Param("id") UUID id);
 }
