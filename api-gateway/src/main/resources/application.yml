@@ -80,7 +80,16 @@ spring:
               uri: http://localhost:4003
               predicates:
                 - Path=/api/payments/webhook/**
-
+                  ## Payment SSE Stream Route (Long-lived connection)
+            - id: payment-sse-route
+              uri: http://localhost:4003
+              predicates:
+                - Path=/api/payments/*/status/stream  ## Chỉ bắt đúng đường dẫn luồng stream
+              filters:
+                - Authentication
+              metadata:
+                response-timeout: 900000 # Cho phép kết nối giữ tối đa 15 phút (bằng tuổi thọ QR)
+                connect-timeout: 5000    # Thời gian tối đa để bắt tay kết nối (5 giây)
             ## Payment Service Routes
             ## REST CLIENT -> http://localhost:4000/api/payments
             ## API GATEWAY -> http://payment-service:4003/api/payments

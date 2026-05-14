@@ -5,14 +5,17 @@ import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import org.unihubworkshop.paymentservice.dto.ApiResponse;
 import org.unihubworkshop.paymentservice.dto.ChargePaymentRequest;
 import org.unihubworkshop.paymentservice.dto.ChargePaymentResponse;
 import org.unihubworkshop.paymentservice.dto.PaymentResponse;
 import org.unihubworkshop.paymentservice.dto.SepayWebhookPayload;
 import org.unihubworkshop.paymentservice.services.PaymentService;
+import org.unihubworkshop.paymentservice.services.SseService;
 
 import java.util.UUID;
 
@@ -21,10 +24,12 @@ import java.util.UUID;
 public class PaymentController {
     private static final Logger log = LoggerFactory.getLogger(
             PaymentController.class);
+    private final SseService sseService;
 
     private final PaymentService paymentService;
 
-    public PaymentController(PaymentService paymentService) {
+    public PaymentController(SseService sseService, PaymentService paymentService) {
+        this.sseService = sseService;
         this.paymentService = paymentService;
     }
 
@@ -64,6 +69,14 @@ public class PaymentController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(ApiResponse.error("Failed to process payment", null));
         }
+    }
+
+
+    @GetMapping(value = "/{registrationId}/status/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter streamPaymentStatus(
+            @PathVariable UUID registrationId
+            ) {
+        return sseService.createEmitter(registrationId);
     }
 }
 
