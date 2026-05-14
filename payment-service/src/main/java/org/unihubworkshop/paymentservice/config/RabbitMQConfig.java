@@ -19,6 +19,7 @@ public class RabbitMQConfig {
     public static final String PAYMENT_STATUS_UPDATED_ROUTING_KEY = "payment.status.updated";
 
     public static final String REGISTRATION_EXCHANGE = "registration.exchange";
+    public static final String REGISTRATION_CONFIRMED_QUEUE = "registration.confirmed.queue";
     public static final String REGISTRATION_CONFIRMED_ROUTING_KEY = "registration.confirmed";
 
     @Bean

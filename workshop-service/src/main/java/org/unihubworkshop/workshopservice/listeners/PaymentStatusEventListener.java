@@ -57,6 +57,7 @@ public class PaymentStatusEventListener {
             List<String> speakerNames = workshopRepository.findSpeakerNamesByWorkshopId(registration.getWorkshopId());
 
             // Send registration confirmed event for notification service to send email
+            IO.println("Toi day");
             rabbitTemplate.convertAndSend(
                     RabbitMQConfig.REGISTRATION_EXCHANGE,
                     RabbitMQConfig.REGISTRATION_CONFIRMED_ROUTING_KEY,

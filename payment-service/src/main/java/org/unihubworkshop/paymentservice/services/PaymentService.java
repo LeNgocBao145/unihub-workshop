@@ -135,14 +135,14 @@ public class PaymentService {
         Payment payment = paymentRepository.findById(paymentId)
                 .orElseThrow(() -> new PaymentNotFoundException(
                         "Payment not found with ID: " + paymentId));
-        
+        IO.println("Qua day");
         // Check if payment is already processed (bankReferenceCode already set)
         if (payment.getBankReferenceCode() != null) {
             log.warn("Duplicate payment detected for payment ID: {}", paymentId);
             throw new DuplicatePaymentException(
                     "Payment already processed for payment ID: " + paymentId);
         }
-
+        IO.println("Qua day 1");
         // Update payment details
         payment.setBankReferenceCode(payload.referenceCode());
         payment.setProviderTransactionId(payload.transactionId());
@@ -166,7 +166,13 @@ public class PaymentService {
                 userEmail,
                 payment.getId()
         );
+
         paymentEventListener.handlePaymentStatusUpdated(event);
+        rabbitTemplate.convertAndSend(
+                RabbitMQConfig.PAYMENT_EXCHANGE,             // Tên Exchange
+                RabbitMQConfig.PAYMENT_STATUS_UPDATED_ROUTING_KEY, // Routing key
+                event                                        // Dữ liệu gửi đi
+        );
     }
 
     @Transactional(readOnly = true)
