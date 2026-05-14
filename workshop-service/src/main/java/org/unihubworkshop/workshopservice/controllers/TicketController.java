@@ -52,22 +52,4 @@ public class TicketController {
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping(value = "/{registrationId}/status/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public SseEmitter streamRegistrationStatus(@PathVariable UUID registrationId) throws IOException {
-        UUID userId = userContext.getUserId();
-        SseEmitter emitter = new SseEmitter(60000L);
-
-        try {
-            RegistrationStatusResponse statusResponse = ticketService.getRegistrationStatus(registrationId, userId);
-            emitter.send(SseEmitter.event()
-                    .id(registrationId.toString())
-                    .name("registration-status")
-                    .data(statusResponse));
-            emitter.complete();
-        } catch (Exception e) {
-            emitter.completeWithError(e);
-        }
-
-        return emitter;
-    }
 }

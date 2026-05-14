@@ -16,6 +16,7 @@ import org.unihubworkshop.paymentservice.dto.SepayWebhookPayload;
 import org.unihubworkshop.paymentservice.event.PaymentStatusUpdatedEvent;
 import org.unihubworkshop.paymentservice.exceptions.DuplicatePaymentException;
 import org.unihubworkshop.paymentservice.exceptions.PaymentNotFoundException;
+import org.unihubworkshop.paymentservice.listeners.PaymentEventListener;
 import org.unihubworkshop.paymentservice.mapper.PaymentMapper;
 import org.unihubworkshop.paymentservice.models.Payment;
 import org.unihubworkshop.paymentservice.models.PaymentProvider;
@@ -38,7 +39,7 @@ public class PaymentService {
     private final PaymentResilienceService paymentResilienceService;
     private final RabbitTemplate rabbitTemplate;
     private final PaymentEmailCache paymentEmailCache;
-
+    private final PaymentEventListener paymentEventListener;
     @Transactional
     public ChargePaymentResponse chargePayment(ChargePaymentRequest request) {
         log.info("Processing charge payment for registration: {}, status: {}", 
@@ -160,7 +161,12 @@ public class PaymentService {
         }
 
         // Publish events to RabbitMQ
-        publishPaymentStatusUpdatedEvent(updatedPayment, userEmail);
+        PaymentStatusUpdatedEvent event = new PaymentStatusUpdatedEvent(
+                payment.getRegistrationId(),
+                userEmail,
+                payment.getId()
+        );
+        paymentEventListener.handlePaymentStatusUpdated(event);
     }
 
     @Transactional(readOnly = true)
@@ -179,22 +185,7 @@ public class PaymentService {
         return paymentMapper.toResponse(payment);
     }
 
-    private void publishPaymentStatusUpdatedEvent(Payment payment, String userEmail) {
-        PaymentStatusUpdatedEvent event = new PaymentStatusUpdatedEvent(
-                payment.getRegistrationId(),
-                userEmail,
-                payment.getId()
-        );
 
-        rabbitTemplate.convertAndSend(
-                RabbitMQConfig.PAYMENT_EXCHANGE,
-                RabbitMQConfig.PAYMENT_STATUS_UPDATED_ROUTING_KEY,
-                event
-        );
-
-        log.info("Payment status updated event published for registration: {}",
-                 payment.getRegistrationId());
-    }
 
     private String generateExistingQRCode(Payment payment) {
         return paymentResilienceService.executeWithResilience(
@@ -244,6 +235,10 @@ public class PaymentService {
             log.error("Failed to parse payment ID from content: {}", content, e);
             throw new PaymentNotFoundException("Invalid payment ID format in content: " + content);
         }
+    }
+
+    public PaymentEventListener getPaymentEventListener() {
+        return paymentEventListener;
     }
 }
 

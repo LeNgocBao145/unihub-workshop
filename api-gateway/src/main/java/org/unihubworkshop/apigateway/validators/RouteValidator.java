@@ -31,7 +31,7 @@ public class RouteValidator {
         ROLE_REQUIREMENTS.put("^POST /workshops/.*/tickets$", List.of("ATTENDEE", "HOST", "STAFF"));
         ROLE_REQUIREMENTS.put("^GET /workshops/.*/tickets/[^/]+$", List.of("ATTENDEE", "HOST", "STAFF"));
 
-        ROLE_REQUIREMENTS.put("^GET /tickets/.+/status/stream$", List.of("ATTENDEE", "HOST", "STAFF"));
+        ROLE_REQUIREMENTS.put("^GET /api/payments/.*/status/stream$", List.of("ATTENDEE", "HOST", "STAFF"));
         ROLE_REQUIREMENTS.put("^POST /workshops/check-in.*$", List.of("ATTENDEE", "HOST", "STAFF"));
 
         // CÁC ROUTE CHUNG CHUNG (GENERIC) PHẢI ĐẶT Ở DƯỚI CÙNG
