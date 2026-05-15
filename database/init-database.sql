@@ -199,3 +199,50 @@ ALTER TABLE "registrations" ADD CONSTRAINT "fk_registrations_workshop" FOREIGN K
 ALTER TABLE "workshop_speakers" ADD CONSTRAINT "fk_ws_speaker" FOREIGN KEY ("speaker_id") REFERENCES "speakers"("id") ON DELETE CASCADE;
 ALTER TABLE "workshop_speakers" ADD CONSTRAINT "fk_ws_workshop" FOREIGN KEY ("workshop_id") REFERENCES "workshops"("id") ON DELETE CASCADE;
 ALTER TABLE "workshops" ADD CONSTRAINT "fk_workshops_host" FOREIGN KEY ("host_id") REFERENCES "users"("id") ON DELETE SET NULL;
+
+CREATE EXTENSION IF NOT EXISTS pg_cron;
+
+CREATE OR REPLACE FUNCTION handle_expired_items()
+RETURNS void AS $$
+DECLARE
+    vn_now timestamp := timezone('Asia/Ho_Chi_Minh', NOW());
+BEGIN
+    -- Xử lý Payments hết hạn
+    UPDATE payments 
+    SET status = 'FAILED', 
+        updated_at = vn_now
+    WHERE status = 'PENDING' 
+      AND expired_at < vn_now;
+
+    -- Hoàn trả slot cho Workshop
+    WITH expired_regs AS (
+        UPDATE registrations
+        SET status = 'CANCELLED',
+            updated_at = vn_now
+        WHERE status = 'RESERVED'
+          AND expires_at < vn_now
+        RETURNING workshop_id
+    ),
+    summary AS (
+        SELECT workshop_id, COUNT(*) as count_cancelled
+        FROM expired_regs
+        GROUP BY workshop_id
+    )
+    UPDATE workshops
+    SET available_slots = workshops.available_slots + summary.count_cancelled
+    FROM summary
+    WHERE workshops.id = summary.workshop_id;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION handle_cleanup_expired_tokens()
+RETURNS void AS $$
+BEGIN
+    DELETE FROM refresh_tokens 
+    WHERE expiry_date < timezone('Asia/Ho_Chi_Minh', NOW());
+END;
+$$ LANGUAGE plpgsql;
+
+SELECT cron.schedule('handle_expired_items_job', '* * * * *', 'SELECT handle_expired_items();');
+
+SELECT cron.schedule('cleanup_expired_tokens_job', '0 * * * *', 'SELECT handle_cleanup_expired_tokens();');
