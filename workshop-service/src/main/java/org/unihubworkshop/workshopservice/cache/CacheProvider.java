@@ -1,5 +1,6 @@
 package org.unihubworkshop.workshopservice.cache;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
@@ -48,6 +49,17 @@ public interface CacheProvider {
      * @param unit time unit
      */
     void putString(String key, String value, long timeout, TimeUnit unit);
+
+    /**
+     * Execute a cache-native script or atomic operation.
+     *
+     * @param script script body or provider-specific command payload
+     * @param resultType expected result type
+     * @param keys cache keys used by the script
+     * @param <T> result type
+     * @return script result
+     */
+    <T> T execute(String script, Class<T> resultType, List<String> keys);
     
     /**
      * Remove value from cache

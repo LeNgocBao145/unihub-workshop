@@ -143,14 +143,14 @@ public class RedisSlidingWindowRateLimitFilter implements GlobalFilter, Ordered 
         String userId = exchange.getRequest().getHeaders().getFirst("X-User-Id");
 
 
-//        if (userId != null && !userId.isBlank()) {
-//            return "u:" + userId;
-//        }
-//
-//        String authHeader = exchange.getRequest().getHeaders().getFirst("Authorization");
-//        if (authHeader != null && !authHeader.isBlank()) {
-//            return "t:" + sha256(authHeader);
-//        }
+        if (userId != null && !userId.isBlank()) {
+            return "u:" + userId;
+        }
+
+        String authHeader = exchange.getRequest().getHeaders().getFirst("Authorization");
+        if (authHeader != null && !authHeader.isBlank()) {
+            return "t:" + sha256(authHeader);
+        }
 
         String ip = Optional.ofNullable(exchange.getRequest().getRemoteAddress())
                 .map(address -> address.getAddress().getHostAddress())

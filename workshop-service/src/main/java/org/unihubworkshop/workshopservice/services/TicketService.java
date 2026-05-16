@@ -134,7 +134,10 @@ public class TicketService {
             throw new InvalidWorkshopException("No available slots for this workshop");
         }
 
-        // 2. Chốt chặn cuối: Để DB trừ vé an toàn (Atomic Update)
+        // 2. Reserve slot in cache first so the fast path reflects the new availability immediately.
+        cacheAsideService.reserveSlotInCache(workshopId);
+
+        // 3. Chốt chặn cuối: Để DB trừ vé an toàn (Atomic Update)
         int updatedRows = workshopRepository.decrementAvailableSlot(workshopId);
         if (updatedRows == 0) {
             // Đã hết vé ở DB, cập nhật lại Cache cho đồng bộ
@@ -142,7 +145,7 @@ public class TicketService {
             throw new InvalidWorkshopException("Failed to reserve slot, workshop is full");
         }
 
-        // 3. Tiến hành tạo Registration (Đã chắc chắn có vé)
+        // 4. Tiến hành tạo Registration (Đã chắc chắn có vé)
         Workshop workshop = workshopRepository.findById(workshopId)
                 .orElseThrow(() -> new NotFoundException("Workshop not found"));
 
@@ -156,24 +159,6 @@ public class TicketService {
             log.error("Error during ticket booking, rolling back slot reservation", e);
             cacheAsideService.incrementSlot(workshopId);
             throw new RuntimeException("Failed to complete ticket booking: " + e.getMessage(), e);
-        }
-    }
-
-    /**
-     * Reserve a slot for the workshop
-     * Throws exception if no slots available
-     */
-    private void reserveWorkshopSlot(UUID workshopId) {
-        Integer availableSlots = cacheAsideService.getAvailableSlotsWithCache(workshopId);
-        if (availableSlots <= 0) {
-            log.warn("No available slots for workshop: {}", workshopId);
-            throw new InvalidWorkshopException("No available slots for this workshop");
-        }
-
-        boolean slotReserved = cacheAsideService.decrementSlotWithLock(workshopId);
-        if (!slotReserved) {
-            log.warn("Failed to reserve slot for workshop: {}", workshopId);
-            throw new InvalidWorkshopException("Failed to reserve slot, no slots available");
         }
     }
 

@@ -118,7 +118,7 @@ logging:
 
 rate-limit:
   enabled: true
-  max-requests: 60
+  max-requests: 600
   window-seconds: 10
   key-prefix: unihub:gateway:ratelimit
 

@@ -26,9 +26,6 @@ public class SepayClient {
     private String bank;
 
     public String generateQRCode(BigDecimal amount, String description) {
-//        if (true) { // Lát nữa bạn sẽ đổi thành false để test khôi phục
-//            throw new RuntimeException("Giả lập cổng thanh toán Sepay bị sập!");
-//        }
         try {
             String encodedDescription = URLEncoder.encode(description, StandardCharsets.UTF_8);
             

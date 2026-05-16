@@ -167,31 +167,35 @@ Sử dụng **Circuit Breaker** (Closed / Open / Half-Open) kết hợp với **
 
 ### Chống trừ tiền hai lần (Idempotency)
 
-**Giải pháp nhóm lựa chọn:**
-Sử dụng **Idempotency Key** do client tạo, lưu trữ và kiểm tra bằng **Redis**.
+**Tổng quan (cập nhật theo schema `payments`) :**
+Hệ thống ưu tiên dùng thông tin do cổng thanh toán cung cấp để dedupe ở mức database. Bảng `payments` có trường `bank_reference_code` (unique, indexed) — giá trị này chỉ được ghi vào khi webhook xác nhận giao dịch thành công. Khi SePay gọi webhook kèm `bank_reference_code`, service sẽ dùng giá trị này để phát hiện và bỏ qua các webhook trùng lặp.
 
-**Cách hoạt động:**
-- **Khi user bắt đầu thanh toán:**
-  - Client sinh một Idempotency Key (`UUID`).
-  - Gửi kèm key trong mỗi request.
-- **Tại server:**
-  - Kiểm tra Redis:
-    - **Nếu key chưa tồn tại:** Cho phép xử lý request. Sau khi thành công → lưu `key` và `response` (kết quả giao dịch).
-    - **Nếu key đã tồn tại:** Không xử lý lại. Trả về `response` đã lưu trước đó.
-- **TTL (Time-to-live):**
-  - Key được lưu trong Redis với thời gian 15 phút (phù hợp với vòng đời giao dịch).
+**Luồng xử lý đề xuất:**
+- Khi khởi tạo giao dịch: tạo một record `payments` với `status = PENDING`, chưa có `bank_reference_code` và (nếu có) lưu `provider_transaction_id` do cổng trả về.
+- Khi webhook thành công từ SePay đến (body có `bank_reference_code`):
+  1. Kiểm tra nhanh bằng index `bank_reference_code`:
+     - Nếu tồn tại một `payments` với cùng `bank_reference_code` và `status = SUCCESS` → trả về 200, không xử lý lại.
+  2. Nếu chưa tồn tại, trong một transaction cập nhật record liên quan (tìm theo `registration_id` hoặc `provider_transaction_id`): ghi `bank_reference_code`, `actual_content`, `provider_transaction_id` (nếu cần) và set `status = SUCCESS`.
+  3. Nếu có race condition dẫn tới lỗi unique constraint trên `bank_reference_code`, bắt exception đó và tải lại record tồn tại để trả về (treat as duplicate).
 
-**Lý do phù hợp:**
-- Đảm bảo tính idempotent: cùng một request chỉ được xử lý một lần.
-- **Giải quyết các tình huống:**
-  - User spam nút thanh toán.
-  - Retry do network lỗi.
-- **Redis giúp:**
-  - Tra cứu nhanh.
-  - Dễ set TTL để tự động dọn dẹp.
-- **Tránh lỗi nghiêm trọng:**
-  - Trừ tiền nhiều lần.
-  - Duplicate transaction.
+**Ghi chú kỹ thuật:**
+- `bank_reference_code` nên có `UNIQUE` constraint và index (đã có trong schema). Index cho phép kiểm tra trùng lặp cực nhanh khi webhook gọi tới.
+- Không ghi `bank_reference_code` vào DB khi chỉ khởi tạo giao dịch; chỉ set khi webhook xác nhận thành công — điều này tránh ghi nhầm khi giao dịch chưa hoàn tất.
+- `provider_transaction_id` cũng nên có `UNIQUE` nếu nhà cung cấp đảm bảo nó duy nhất, dùng làm cách tìm thay thế khi webhook thiếu `bank_reference_code`.
+- DB-level constraint là hàng rào cuối cùng: ứng dụng cần kiểm tra trước bằng index, nhưng vẫn phải xử lý lỗi unique constraint defensively.
+
+**Kết hợp với Idempotency Key (Redis):**
+- Redis idempotency key vẫn hữu ích cho các trường hợp client retry trực tiếp (user nhấn nút nhiều lần) hoặc khi gọi API khởi tạo giao dịch — dùng để tránh tạo nhiều request khởi tạo đến cổng thanh toán.
+- Tuy nhiên, dedupe cuối cùng khi nhận webhook thành công phải dựa vào `bank_reference_code` (và/hoặc `provider_transaction_id`) vì đó là nguồn tin cậy từ hệ thống thanh toán.
+
+**TTL / Lưu trữ:**
+- Giữ `bank_reference_code` vĩnh viễn (hoặc trong chu kỳ audit phù hợp) để hỗ trợ truy cứu và tránh duplicate lâu dài.
+- Redis idempotency keys nên có TTL ngắn (ví dụ 15 phút) tương ứng vòng đời giao dịch.
+
+**Tóm tắt:**
+- Dùng `bank_reference_code` (DB unique + index) làm cơ chế dedupe chính khi xử lý webhook từ SePay.
+- Dùng Redis idempotency key ở lớp khởi tạo giao dịch để tránh double-submit từ client.
+- Kết hợp kiểm tra bằng index + xử lý lỗi unique constraint để bảo đảm an toàn trong mọi race condition.
 
 ## Các quyết định kỹ thuật quan trọng (ADR - Architecture Decision Records)
 

@@ -6,8 +6,10 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Primary;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
@@ -57,6 +59,13 @@ public class RedisCacheProvider implements CacheProvider {
     public void putString(String key, String value, long timeout, TimeUnit unit) {
         log.debug("Putting string value in Redis for key: {} with TTL", key);
         redisTemplate.opsForValue().set(key, value, timeout, unit);
+    }
+
+    @Override
+    public <T> T execute(String script, Class<T> resultType, List<String> keys) {
+        log.debug("Executing Redis script for keys: {}", keys);
+        DefaultRedisScript<T> redisScript = new DefaultRedisScript<>(script, resultType);
+        return redisTemplate.execute(redisScript, keys);
     }
     
     @Override

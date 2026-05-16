@@ -5,10 +5,12 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.unihubworkshop.workshopservice.cache.CacheProvider;
+import org.unihubworkshop.workshopservice.exceptions.InvalidWorkshopException;
 import org.unihubworkshop.workshopservice.models.Workshop;
 import org.unihubworkshop.workshopservice.repositories.WorkshopRepository;
 import org.unihubworkshop.workshopservice.exceptions.NotFoundException;
 
+import java.util.Collections;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -23,7 +25,12 @@ import java.util.UUID;
 @Transactional
 public class CacheAsideService {
     private static final Logger log = LoggerFactory.getLogger(CacheAsideService.class);
-    
+
+    private static final String LUA_RESERVE_SLOT =
+            "local current = redis.call('get', KEYS[1]); " +
+                    "if not current then return -2; end; " +
+                    "if tonumber(current) <= 0 then return -1; end; " +
+                    "return redis.call('decr', KEYS[1]);";
     private static final String SLOT_CACHE_KEY_PREFIX = "workshop:slots:";
     private static final String QR_CODE_CACHE_KEY_PREFIX = "qrcode:payment:";
     private static final long SLOT_CACHE_TTL_SECONDS = 300; // 5 minutes
@@ -67,31 +74,32 @@ public class CacheAsideService {
     }
 
     /**
-     * Decrement slots with cache invalidation
-     * Uses pessimistic locking to avoid race conditions
+     * Reserve one slot in cache before touching the database.
+     * This keeps the fast path consistent and prevents extra DB work when cache says the workshop is full.
      */
-    @Transactional
-    public boolean decrementSlotWithLock(UUID workshopId) {
-        log.info("Attempting to decrement slot for workshop: {}", workshopId);
+    public int reserveSlotInCache(UUID workshopId) {
+        String cacheKey = SLOT_CACHE_KEY_PREFIX + workshopId;
 
-        Workshop workshop = workshopService.findWorkshopById(workshopId);
+        Long result = cacheProvider.execute(LUA_RESERVE_SLOT, Long.class, Collections.singletonList(cacheKey));
 
-        // Check if slots are available
-        if (workshop.getAvailableSlots() <= 0) {
-            log.warn("No available slots for workshop: {}", workshopId);
-            return false;
+        if (result == -2) {
+            Workshop workshop = workshopRepository.findById(workshopId)
+                    .orElseThrow(() -> new NotFoundException("Workshop not found"));
+
+            int dbSlots = workshop.getAvailableSlots();
+            if (dbSlots <= 0) throw new InvalidWorkshopException("No available slots for this workshop");
+            
+            cacheProvider.put(cacheKey, dbSlots - 1, SLOT_CACHE_TTL_SECONDS, java.util.concurrent.TimeUnit.SECONDS);
+            return dbSlots - 1;
         }
 
-        // Decrement slot atomically
-        workshop.setAvailableSlots(workshop.getAvailableSlots() - 1);
-        Workshop updated = workshopRepository.save(workshop);
+        if (result == -1) {
+            throw new InvalidWorkshopException("No available slots for this workshop");
+        }
 
-        // Invalidate cache to ensure consistency
-        invalidateCache(workshopId);
-
-        log.info("Successfully decremented slot for workshop: {}. Remaining slots: {}",
-                workshopId, updated.getAvailableSlots());
-        return true;
+        int remainingSlots = result.intValue();
+        log.info("Reserved one slot in cache for workshop {}. Remaining: {}", workshopId, remainingSlots);
+        return remainingSlots;
     }
 
     /**
