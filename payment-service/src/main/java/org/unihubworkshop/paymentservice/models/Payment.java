@@ -12,7 +12,6 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "payments", indexes = {
-        @Index(name = "idx_registration_id", columnList = "registration_id"),
         @Index(name = "idx_bank_reference_code", columnList = "bank_reference_code")
 })
 @Getter
@@ -26,7 +25,7 @@ public class Payment {
     private UUID id;
 
     @NotNull(message = "Registration ID is required")
-    @Column(nullable = false)
+    @Column(nullable = false, unique = true)
     private UUID registrationId;
 
     @NotNull(message = "Amount is required")

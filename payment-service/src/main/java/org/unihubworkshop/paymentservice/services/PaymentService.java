@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.unihubworkshop.paymentservice.cache.PaymentEmailCache;
@@ -104,7 +105,17 @@ public class PaymentService {
         payment.setStatus(PaymentStatus.PENDING);
         payment.setExpiredAt(LocalDateTime.now().plusMinutes(QR_CODE_EXPIRY_MINUTES));
 
-        Payment savedPayment = paymentRepository.save(payment);
+        Payment savedPayment;
+        try {
+            savedPayment = paymentRepository.saveAndFlush(payment);
+        } catch (DataIntegrityViolationException e) {
+            log.warn("Concurrent payment creation detected for registration: {}", request.registrationId());
+            Payment existingPayment = paymentRepository.findByRegistrationId(request.registrationId())
+                .orElseThrow(() -> e);
+            return new ChargePaymentResponse(existingPayment.getId(),
+                generateExistingQRCode(existingPayment));
+        }
+
         log.info("Payment created with ID: {}", savedPayment.getId());
 
         if(paymentEmailCache.getEmail(savedPayment.getId()) == null){

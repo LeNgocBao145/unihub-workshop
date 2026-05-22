@@ -1,7 +1,7 @@
 -- Payments Table
 CREATE TABLE IF NOT EXISTS payments (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    registration_id UUID NOT NULL,
+    registration_id UUID NOT NULL UNIQUE,
     amount NUMERIC(10, 2) NOT NULL,
     provider VARCHAR(50) NOT NULL,
     gateway VARCHAR(50),
@@ -14,7 +14,6 @@ CREATE TABLE IF NOT EXISTS payments (
 );
 
 -- Create indexes for performance
-CREATE INDEX idx_registration_id ON payments(registration_id);
 CREATE INDEX idx_bank_reference_code ON payments(bank_reference_code);
 CREATE INDEX idx_provider_transaction_id ON payments(provider_transaction_id);
 CREATE INDEX idx_status ON payments(status);

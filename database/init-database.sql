@@ -46,7 +46,7 @@ CREATE TABLE "majors" (
 );
 CREATE TABLE "payments" (
                             "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-                            "registration_id" uuid NOT NULL,
+                            "registration_id" uuid NOT NULL CONSTRAINT "payments_registration_id_key" UNIQUE,
                             "amount" numeric(10, 2) NOT NULL,
                             "provider" varchar(255) NOT NULL,
                             "gateway" varchar(20),
@@ -168,8 +168,6 @@ CREATE UNIQUE INDEX "majors_pkey" ON "majors" ("id");
 CREATE INDEX "idx_bank_reference_code" ON "payments" ("bank_reference_code");
 CREATE UNIQUE INDEX "idx_payments_bank_reference" ON "payments" ("bank_reference_code");
 CREATE INDEX "idx_payments_bank_reference_code" ON "payments" ("bank_reference_code");
-CREATE INDEX "idx_payments_registration_id" ON "payments" ("registration_id");
-CREATE INDEX "idx_registration_id" ON "payments" ("registration_id");
 CREATE UNIQUE INDEX "payments_bank_reference_code_key" ON "payments" ("bank_reference_code");
 CREATE UNIQUE INDEX "payments_pkey" ON "payments" ("id");
 CREATE UNIQUE INDEX "payments_provider_transaction_id_key" ON "payments" ("provider_transaction_id");
